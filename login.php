@@ -57,15 +57,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $stmt->bind_result($id, $email, $hashed_password);
                     if ($stmt->fetch()) {
                         if (password_verify($password, $hashed_password)) {
-                            // Password is correct, start a new session
+
                             session_start();
                             
                             // Store data in session variables
                             $_SESSION["loggedin"] = true;
                             $_SESSION["id"] = $id;
-                            $_SESSION["email"] = $email;                            
-                            
+                            $_SESSION["email"] = $email;
+                            $_SESSION["user"] = $email;
+
+                            $user_query = "SELECT firstname, lastname, username FROM users WHERE id = ?";
+                            $stmt_user = $conn->prepare($user_query);
+                            $stmt_user->bind_param("i", $id);
+                            $stmt_user->execute();
+                            $stmt_user->bind_result($firstname, $lastname, $username);
+                            $stmt_user->fetch();
                             // Redirect user to welcome page
+
+                            $_SESSION["firstname"] = $firstname;
+                            $_SESSION["lastname"] = $lastname;
+                            $_SESSION["username"] = $username;
+
+                            
                             header("location: dashboard.php");
                         } else {
                             // Password is not valid
