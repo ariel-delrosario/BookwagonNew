@@ -338,7 +338,7 @@ include("connect.php");
             </a>
             
             <div class="d-flex align-items-center">
-                <a href="#" class="nav-link me-3">Start selling</a>
+                <a href="start_selling.php" class="nav-link me-3">Start selling</a>
                 <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
                 <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
                 <a href="#" class="nav-link"><?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?></a>
