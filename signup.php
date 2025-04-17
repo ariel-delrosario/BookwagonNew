@@ -14,27 +14,27 @@ if ($conn->connect_error) {
 }
 
 // Initialize variables
-$firstname = $middlename = $lastname = $email = $password = $confirm_password = "";
-$firstname_err = $lastname_err = $email_err = $password_err = $confirm_password_err = $signup_err = "";
+$firstName = $middleInitial = $lastName = $email = $password = $confirm_password = "";
+$firstName_err = $lastName_err = $email_err = $password_err = $confirm_password_err = $signup_err = "";
 
 // Processing form data when form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
-    // Validate firstname
+    // Validate firstName
     if (empty(trim($_POST["firstname"]))) {
-        $firstname_err = "Please enter your first name.";
+        $firstName_err = "Please enter your first name.";
     } else {
-        $firstname = trim($_POST["firstname"]);
+        $firstName = trim($_POST["firstname"]);
     }
     
-    // Middle name is optional, just get it if provided
-    $middlename = trim($_POST["middlename"]);
+    // Middle initial is optional, just get it if provided
+    $middleInitial = trim($_POST["middlename"]);
     
-    // Validate lastname
+    // Validate lastName
     if (empty(trim($_POST["lastname"]))) {
-        $lastname_err = "Please enter your last name.";
+        $lastName_err = "Please enter your last name.";
     } else {
-        $lastname = trim($_POST["lastname"]);
+        $lastName = trim($_POST["lastname"]);
     }
     
     // Validate email
@@ -84,19 +84,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // Check input errors before inserting into database
-    if (empty($firstname_err) && empty($lastname_err) && empty($email_err) && empty($password_err) && empty($confirm_password_err)) {
+    if (empty($firstName_err) && empty($lastName_err) && empty($email_err) && empty($password_err) && empty($confirm_password_err)) {
         
         // Prepare an insert statement
-        $sql = "INSERT INTO users (firstname, middlename, lastname, email, password) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO users (firstName, middleInitial, lastName, email, password) VALUES (?, ?, ?, ?, ?)";
          
         if ($stmt = $conn->prepare($sql)) {
             // Bind variables to the prepared statement as parameters
             $stmt->bind_param("sssss", $param_firstname, $param_middlename, $param_lastname, $param_email, $param_password);
             
             // Set parameters
-            $param_firstname = $firstname;
-            $param_middlename = $middlename;
-            $param_lastname = $lastname;
+            $param_firstname = $firstName;
+            $param_middlename = $middleInitial;
+            $param_lastname = $lastName;
             $param_email = $email;
             $param_password = password_hash($password, PASSWORD_DEFAULT); // Creates a password hash
             
@@ -350,20 +350,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
                         <div class="name-row">
                             <div class="form-group">
-                                <input type="text" name="firstname" class="form-control <?php echo (!empty($firstname_err)) ? 'is-invalid' : ''; ?>" 
-                                       value="<?php echo $firstname; ?>" placeholder="First Name">
-                                <span class="invalid-feedback"><?php echo $firstname_err; ?></span>
+                                <input type="text" name="firstname" class="form-control <?php echo (!empty($firstName_err)) ? 'is-invalid' : ''; ?>" 
+                                       value="<?php echo $firstName; ?>" placeholder="First Name">
+                                <span class="invalid-feedback"><?php echo $firstName_err; ?></span>
                             </div>
                             
                             <div class="form-group">
                                 <input type="text" name="middlename" class="form-control" 
-                                       value="<?php echo $middlename; ?>" placeholder="Middle Name">
+                                       value="<?php echo $middleInitial; ?>" placeholder="Middle Name">
                             </div>
                             
                             <div class="form-group">
-                                <input type="text" name="lastname" class="form-control <?php echo (!empty($lastname_err)) ? 'is-invalid' : ''; ?>" 
-                                       value="<?php echo $lastname; ?>" placeholder="Last Name">
-                                <span class="invalid-feedback"><?php echo $lastname_err; ?></span>
+                                <input type="text" name="lastname" class="form-control <?php echo (!empty($lastName_err)) ? 'is-invalid' : ''; ?>" 
+                                       value="<?php echo $lastName; ?>" placeholder="Last Name">
+                                <span class="invalid-feedback"><?php echo $lastName_err; ?></span>
                             </div>
                         </div>
                         
