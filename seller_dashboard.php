@@ -1,6 +1,22 @@
 <?php
 include("session.php");
 include("connect.php");
+
+// Check if user is a seller
+try {
+    $stmt = $pdo->prepare("SELECT is_seller FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    
+    if (!$user || $user['is_seller'] != 1) {
+        header("Location: dashboard.php");
+        exit();
+    }
+} catch(PDOException $e) {
+    error_log("Error checking seller status: " . $e->getMessage());
+    header("Location: dashboard.php");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -175,21 +191,36 @@ include("connect.php");
             text-decoration: none;
             font-size: 14px;
         }
+
+        /* Add hover styles for Manage your sales button */
+        .nav-link.me-3:hover {
+            color: var(--primary-color);
+            transition: color 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <!-- Header/Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="dashboard.php">
                 <img src="images/logo.png" alt="BookWagon">
             </a>
             
             <div class="d-flex align-items-center">
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
-                <a href="#" class="nav-link me-3"><?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?></a>
-                <a href="logout.php" class="nav-link">Logout</a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-bell"></i></a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-envelope"></i></a>
+                <div class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <?php echo isset($_SESSION['firstname']) ? htmlspecialchars($_SESSION['firstname']) : htmlspecialchars($_SESSION['email']); ?>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>

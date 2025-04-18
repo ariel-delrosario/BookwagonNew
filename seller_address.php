@@ -88,22 +88,36 @@ if (!isset($_SESSION['temp_seller_id'])) {
             padding: 12px 24px;
             font-weight: 500;
         }
+
+        /* Add hover styles for navigation links */
+        .nav-link.me-3:hover {
+            color: var(--primary-color);
+            transition: color 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <!-- Header/Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="dashboard.php">
                 <img src="images/logo.png" alt="BookWagon">
             </a>
             
             <div class="d-flex align-items-center">
-                <a href="#" class="nav-link me-3">Start selling</a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
-                <a href="#" class="nav-link me-3"><?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?></a>
-                <a href="logout.php" class="nav-link">Logout</a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-bell"></i></a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-envelope"></i></a>
+                <div class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <?php echo isset($_SESSION['firstname']) ? htmlspecialchars($_SESSION['firstname']) : htmlspecialchars($_SESSION['email']); ?>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -153,7 +167,7 @@ if (!isset($_SESSION['temp_seller_id'])) {
                 </div>
             <?php endif; ?>
 
-            <form action="process_seller_address.php" method="POST">
+            <form action="process_seller_address.php" method="POST" id="sellerAddressForm">
                 <div class="mb-4">
                     <label for="country" class="form-label">Country/Region</label>
                     <select class="form-select" id="country" name="country" required>
@@ -235,7 +249,50 @@ if (!isset($_SESSION['temp_seller_id'])) {
         </div>
     </div>
 
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center px-4 py-4">
+                    <i class="fas fa-check-circle text-success mb-4" style="font-size: 4rem;"></i>
+                    <h4 class="mb-4">Thank you!</h4>
+                    <p class="mb-4">We're reviewing your submission. You'll be able to start selling once approved.</p>
+                    <button type="button" class="btn btn-dark" onclick="window.location.href='dashboard.php'">
+                        Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.getElementById('sellerAddressForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Send form data using fetch
+            fetch('process_seller_address.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Show the success modal
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
 </body>
 </html> 

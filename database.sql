@@ -2,14 +2,15 @@
 CREATE DATABASE IF NOT EXISTS bookwagon_db;
 USE bookwagon_db;
 
--- Drop existing tables if they exist
+-- Drop existing tables if they exist (in correct order due to foreign key constraints)
 DROP TABLE IF EXISTS seller_verification;
 DROP TABLE IF EXISTS seller_identification;
 DROP TABLE IF EXISTS seller_selfies;
 DROP TABLE IF EXISTS seller_addresses;
 DROP TABLE IF EXISTS seller_ids;
 DROP TABLE IF EXISTS seller_details;
-DROP TABLE IF EXISTS sellers;
+DROP TABLE IF EXISTS admin_activity_logs;
+DROP TABLE IF EXISTS admins;
 DROP TABLE IF EXISTS users;
 
 -- Create users table
@@ -21,7 +22,31 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     is_seller BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create admins table
+CREATE TABLE IF NOT EXISTS admins (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    last_login TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    status ENUM('active', 'inactive') DEFAULT 'active'
+);
+
+-- Create admin_activity_logs table
+CREATE TABLE IF NOT EXISTS admin_activity_logs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    details TEXT,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admins(id)
 );
 
 -- Create seller_details table
@@ -33,6 +58,7 @@ CREATE TABLE IF NOT EXISTS seller_details (
     verification_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     registration_complete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -42,7 +68,9 @@ CREATE TABLE IF NOT EXISTS seller_ids (
     seller_id INT NOT NULL,
     id_type ENUM('primary', 'secondary') NOT NULL,
     id_name VARCHAR(50) NOT NULL,
-    id_image_path VARCHAR(255) NOT NULL,
+    id_front_image VARCHAR(255) NOT NULL,
+    id_back_image VARCHAR(255) NOT NULL,
+    other_id_type VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES seller_details(id)
 );
@@ -67,6 +95,7 @@ CREATE TABLE IF NOT EXISTS seller_addresses (
     country VARCHAR(100) NOT NULL,
     is_default BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES seller_details(id)
 );
 
@@ -75,12 +104,13 @@ CREATE TABLE IF NOT EXISTS seller_verification (
     id INT PRIMARY KEY AUTO_INCREMENT,
     seller_id INT NOT NULL,
     verified_by INT,
-    verification_date TIMESTAMP,
+    verification_date TIMESTAMP NULL,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-    notes TEXT,
+    admin_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES seller_details(id),
-    FOREIGN KEY (verified_by) REFERENCES users(id)
+    FOREIGN KEY (verified_by) REFERENCES admins(id)
 );
 
 -- Create sellers table
@@ -131,6 +161,7 @@ CREATE TABLE IF NOT EXISTS `seller_verification` (
 -- Create indexes for better performance
 CREATE INDEX idx_user_email ON users(email);
 CREATE INDEX idx_user_seller ON users(is_seller);
+CREATE INDEX idx_admin_username ON admins(username);
 CREATE INDEX idx_seller_details_user ON seller_details(user_id);
 CREATE INDEX idx_seller_details_status ON seller_details(verification_status);
 CREATE INDEX idx_seller_details_complete ON seller_details(registration_complete);
@@ -138,4 +169,11 @@ CREATE INDEX idx_seller_ids_seller ON seller_ids(seller_id);
 CREATE INDEX idx_seller_selfies_seller ON seller_selfies(seller_id);
 CREATE INDEX idx_seller_addresses_seller ON seller_addresses(seller_id);
 CREATE INDEX idx_seller_verification_seller ON seller_verification(seller_id);
-CREATE INDEX idx_seller_verification_status ON seller_verification(status); 
+CREATE INDEX idx_seller_verification_status ON seller_verification(status);
+CREATE INDEX idx_admin_activity_logs_admin ON admin_activity_logs(admin_id);
+
+-- Insert default admin account
+INSERT INTO admins (username, password, email) 
+VALUES ('Admin', '$2y$10$8VQqUJqyGV0vxS2S/t5E/.eGhYo6UyGsRdkIQhb7TAWcaCvwYyTB.', 'admin@bookwagon.com')
+ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
+-- Note: Default password is "123456" (hashed) 

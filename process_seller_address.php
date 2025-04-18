@@ -1,6 +1,6 @@
 <?php
-session_start();
-require_once 'connect.php';
+include("session.php");
+include("connect.php");
 
 // Add error reporting
 error_reporting(E_ALL);
@@ -44,61 +44,63 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Start transaction
         $pdo->beginTransaction();
 
-        // Insert address - using the correct column names from the database
-        $stmt = $pdo->prepare("INSERT INTO seller_addresses (seller_id, street_address, city, state, postal_code, country, is_default)
-            VALUES (:seller_id, :street_address, :city, :state, :postal_code, :country, TRUE)");
-        
-        $stmt->execute([
-            ':seller_id' => $_SESSION['temp_seller_id'],
-            ':street_address' => $_POST['detailed_address'],
-            ':city' => $_POST['city'],
-            ':state' => $_POST['province'], // Using province as state
-            ':postal_code' => $_POST['postal_code'],
-            ':country' => $_POST['country']
-        ]);
+        try {
+            // Insert address
+            $sql = "INSERT INTO seller_addresses (
+                seller_id, 
+                street_address,
+                city,
+                state,
+                postal_code,
+                country,
+                is_default
+            ) VALUES (?, ?, ?, ?, ?, ?, 1)";
 
-        // Update seller_details to mark registration as complete
-        $stmt = $pdo->prepare("UPDATE seller_details SET registration_complete = TRUE WHERE id = :seller_id");
-        $stmt->execute([':seller_id' => $_SESSION['temp_seller_id']]);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                $_SESSION['temp_seller_id'],
+                $_POST['detailed_address'],
+                $_POST['city'],
+                $_POST['state'] ?? '',
+                $_POST['postal_code'],
+                $_POST['country']
+            ]);
 
-        // Update user's is_seller status
-        $stmt = $pdo->prepare("UPDATE users SET is_seller = TRUE WHERE id = :user_id");
-        $stmt->execute([':user_id' => $_SESSION['user_id']]);
+            // Update seller_details to mark registration as complete
+            $sql = "UPDATE seller_details 
+                   SET registration_complete = 1,
+                       verification_status = 'pending'
+                   WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$_SESSION['temp_seller_id']]);
 
-        // Commit transaction
-        $pdo->commit();
+            // Commit transaction
+            $pdo->commit();
 
-        // Clear temporary session data
-        unset($_SESSION['temp_seller_id']);
-        unset($_SESSION['address_form_data']);
-        unset($_SESSION['seller_data']);
-        
-        // Set success message
-        $_SESSION['success_message'] = "Congratulations! Your seller registration is complete. You can now start selling on Bookwagon!";
-        
-        // Redirect to seller dashboard
-        header("Location: seller_dashboard.php");
-        exit();
+            // Clear temporary session data
+            unset($_SESSION['temp_seller_id']);
+            unset($_SESSION['address_form_data']);
+
+            // Set success message
+            $_SESSION['success_message'] = "Your seller application has been submitted successfully! Please wait for admin approval.";
+            
+            // Redirect to dashboard
+            header("Location: dashboard.php");
+            exit();
+
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $pdo->rollBack();
+            throw $e;
+        }
 
     } catch (Exception $e) {
-        // Roll back transaction if active
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        
-        // Log error
         error_log("Error in process_seller_address.php: " . $e->getMessage());
-        
-        // Store error message and form data
         $_SESSION['error_message'] = "An error occurred while processing your request: " . $e->getMessage();
-        $_SESSION['address_form_data'] = $_POST;
-        
-        // Redirect back to form
         header("Location: seller_address.php");
         exit();
     }
 } else {
-    // Redirect to form if accessed directly
     header("Location: seller_address.php");
     exit();
 }

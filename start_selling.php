@@ -185,22 +185,36 @@ try {
             background-color: #f8f9fa;
             cursor: not-allowed;
         }
+
+        /* Add hover styles for navigation links */
+        .nav-link.me-3:hover {
+            color: var(--primary-color);
+            transition: color 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <!-- Header/Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="dashboard.php">
                 <img src="images/logo.png" alt="BookWagon">
             </a>
             
             <div class="d-flex align-items-center">
-                <a href="#" class="nav-link me-3">Start selling</a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
-                <a href="#" class="nav-link me-3"><?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?></a>
-                <a href="logout.php" class="nav-link">Logout</a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-bell"></i></a>
+                <a href="#" class="nav-link me-3" style="transition: color 0.3s ease;"><i class="fa-regular fa-envelope"></i></a>
+                <div class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <?php echo isset($_SESSION['firstname']) ? htmlspecialchars($_SESSION['firstname']) : htmlspecialchars($_SESSION['email']); ?>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
