@@ -87,11 +87,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($firstname_err) && empty($lastname_err) && empty($email_err) && empty($password_err) && empty($confirm_password_err)) {
         
         // Prepare an insert statement
-        $sql = "INSERT INTO users (firstname, middlename, lastname, email, password) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO users (firstname, middlename, lastname, email, password, usertype) VALUES (?, ?, ?, ?, ?, ?)";
          
         if ($stmt = $conn->prepare($sql)) {
             // Bind variables to the prepared statement as parameters
-            $stmt->bind_param("sssss", $param_firstname, $param_middlename, $param_lastname, $param_email, $param_password);
+            $stmt->bind_param("ssssss", $param_firstname, $param_middlename, $param_lastname, $param_email, $param_password, $param_usertype);
             
             // Set parameters
             $param_firstname = $firstname;
@@ -99,11 +99,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $param_lastname = $lastname;
             $param_email = $email;
             $param_password = password_hash($password, PASSWORD_DEFAULT); // Creates a password hash
+            $param_usertype = "user"; // Set default user type
             
             // Attempt to execute the prepared statement
             if ($stmt->execute()) {
                 // Redirect to login page
-                header("location: login.php");
+                echo "<script>
+                alert('Account created successfully!');
+                window.location.href = 'login.php';
+            </script>";
             } else {
                 $signup_err = "Something went wrong. Please try again later.";
             }

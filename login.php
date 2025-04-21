@@ -1,17 +1,6 @@
 <?php
-// Database configuration
-$db_host = "localhost";      // Usually "localhost" for local development
-$db_user = "root";           // Database username (default is "root" for XAMPP/MAMP)
-$db_pass = "";               // Database password (often empty for local development)
-$db_name = "bookwagon_db";   // Your database name
 
-// Create connection
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include("connect.php");
 
 // Initialize variables
 $email = $password = "";
@@ -37,8 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check input errors before checking database
     if (empty($email_err) && empty($password_err)) {
         // Prepare a select statement
-        $sql = "SELECT id, email, password FROM users WHERE email = ?";
-        
+        $sql = "SELECT id, email, password, firstname, lastname, username, usertype FROM users WHERE email = ?";
+
         if ($stmt = $conn->prepare($sql)) {
             // Bind variables to the prepared statement as parameters
             $stmt->bind_param("s", $param_email);
@@ -54,32 +43,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Check if email exists, if yes then verify password
                 if ($stmt->num_rows == 1) {                    
                     // Bind result variables
-                    $stmt->bind_result($id, $email, $hashed_password);
+                    $stmt->bind_result($id, $email, $hashed_password, $firstname, $lastname, $username, $usertype);
                     if ($stmt->fetch()) {
                         if (password_verify($password, $hashed_password)) {
-
+                            // Password is correct, start a new session
                             session_start();
                             
                             // Store data in session variables
                             $_SESSION["loggedin"] = true;
                             $_SESSION["id"] = $id;
                             $_SESSION["email"] = $email;
-                            $_SESSION["user"] = $email;
-
-                            $user_query = "SELECT firstname, lastname, username FROM users WHERE id = ?";
-                            $stmt_user = $conn->prepare($user_query);
-                            $stmt_user->bind_param("i", $id);
-                            $stmt_user->execute();
-                            $stmt_user->bind_result($firstname, $lastname, $username);
-                            $stmt_user->fetch();
-                            // Redirect user to welcome page
-
                             $_SESSION["firstname"] = $firstname;
                             $_SESSION["lastname"] = $lastname;
                             $_SESSION["username"] = $username;
-
+                            $_SESSION["usertype"] = $usertype;
                             
-                            header("location: dashboard.php");
+                            // Redirect based on usertype
+                            if($usertype === "admin") {
+                                header("location: admin/dashboard.php");
+                            } else {
+                                header("location: dashboard.php");
+                            }
                         } else {
                             // Password is not valid
                             $login_err = "Invalid email or password.";
@@ -92,7 +76,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 echo "Oops! Something went wrong. Please try again later.";
             }
-
+        
             // Close statement
             $stmt->close();
         }

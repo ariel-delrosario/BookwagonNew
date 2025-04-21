@@ -1,6 +1,16 @@
 <?php
 include("session.php");
 include("connect.php");
+
+
+$userType = $_SESSION['usertype'] ?? ''; // Change to lowercase 'usertype'
+$firstName = $_SESSION['firstname'] ?? ''; // Change to lowercase 'firstname'
+$lastName = $_SESSION['lastname'] ?? ''; // Change to lowercase 'lastname'
+$email = $_SESSION['email'] ?? '';
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 ?>
 
 
@@ -13,6 +23,7 @@ include("connect.php");
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/tab.css">
     <style>
         :root {
             --primary-color: #f8a100;
@@ -35,24 +46,10 @@ include("connect.php");
         }
         
         .navbar-brand img {
-            height: 40px;
+            height: 60px;
         }
         
-        .nav-item {
-            margin: 0 10px;
-        }
-        
-        .nav-link {
-            color: var(--text-dark);
-            font-weight: 500;
-        }
-        
-        .nav-link.active {
-            color: var(--primary-color);
-            font-weight: 600;
-            border-bottom: 2px solid var(--primary-color);
-        }
-        
+ 
         /* Carousel styles */
         .carousel {
             margin: 20px 0;
@@ -329,51 +326,43 @@ include("connect.php");
         }
     </style>
 </head>
+
 <body>
-    <!-- Header/Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <img src="images/logo.png" alt="BookWagon">
-            </a>
-            
-            <div class="d-flex align-items-center">
-                <a href="#" class="nav-link me-3">Start selling</a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
-                <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
-                <a href="#" class="nav-link"><?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?></a>
-                <a href="logout.php" class="nav-link">Logout</a>
-            </div>
-        </div>
-    </nav>
+<?php 
+    if ($userType == 'user') {
+        include("include/user_header.php");
+    } elseif ($userType == 'seller') {
+        include("include/seller_header.php");
+    }
+    ?>
+
 
     <!-- Navigation tabs -->
-    <div class="container">
-    <ul class="nav nav-underline mb-4 justify-content-center mt-5">
-        <li class="nav-item">
-            <a class="nav-link active" href="#">Home</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Rent Books</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Explore</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Libraries</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Book Swap</a>
-        </li>
-    </ul>
-</div>
+    <div class="container  pt-3">
+    <div class="tab-menu">
+      <a href="dashboard.php" class="active">
+          
+          Home
+      </a>
+      <a href="rentbooks.php">
+         
+          Rentbooks
+      </a>
+      <a href="grocery.php">
+          
+          Explore
+      </a>
+      <a href="libraries.php">
+          
+          Libraries
+      </a>
+      <a href="bookswap.php">
+          
+          Bookswap
+      </a>
+    </div>
 
 
-
-
-    
-    <!-- Carousel -->
-    <!-- Carousel for Dashboard -->
 <div class="container text-center">
     <div id="heroCarousel" class="carousel slide mx-auto" data-bs-ride="carousel" style="max-width: 800px;">
         <div class="carousel-inner">
@@ -628,7 +617,7 @@ include("connect.php");
             </div>
         </div>
     </div>
-    
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -687,6 +676,26 @@ include("connect.php");
     </div>
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize carousel
+        document.addEventListener('DOMContentLoaded', function() {
+            new bootstrap.Carousel(document.querySelector('#heroCarousel'), {
+                interval: 3000, // Change slides every 3 seconds
+                wrap: true     // Continue from last to first slide
+            });
+        });
+    </script>
+        <script>
+        // Prevent back button after logout
+        window.onload = function() {
+            if(typeof window.history.pushState == 'function') {
+                window.history.pushState({}, "Hide", location.href);
+            }
+            window.onpopstate = function() {
+                window.history.go(1);
+            };
+        };
+    </script>
 </body>
 </html>

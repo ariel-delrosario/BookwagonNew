@@ -4,7 +4,7 @@ $db_user = "root";           // Database username (default is "root" for XAMPP/M
 $db_pass = "";               // Database password (often empty for local development)
 $db_name = "bookwagon_db";   // Your database name
 
-// Create connection
+// Create connection using the variables
 $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 
 // Check connection

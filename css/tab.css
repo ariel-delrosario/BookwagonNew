@@ -1,0 +1,30 @@
+.tab-menu {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+  }
+.tab-menu a {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    color: black; /* Default color */
+    font-size: 16px; /* Default size */
+  }
+  
+  .tab-menu a img {
+    margin-right: 8px;
+    height: 24px; /* Adjust the size as needed */
+  }
+  
+  .tab-menu a:hover {
+    color: #f8ad3e; /* Change color on hover */
+  }
+  
+  .tab-menu a.active {
+    color: #f8ad3e; /* Active color */
+    border-bottom: 2px solid #f8ad3e; /* Active underline */
+  }
+  
