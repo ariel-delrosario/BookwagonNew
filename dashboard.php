@@ -7,6 +7,9 @@ $userType = $_SESSION['usertype'] ?? ''; // Change to lowercase 'usertype'
 $firstName = $_SESSION['firstname'] ?? ''; // Change to lowercase 'firstname'
 $lastName = $_SESSION['lastname'] ?? ''; // Change to lowercase 'lastname'
 $email = $_SESSION['email'] ?? '';
+$phone = $_SESSION['phone'] ?? '';
+$photo = $_SESSION['profile_picture'] ?? '';
+
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -38,7 +41,23 @@ if ($conn->connect_error) {
             color: var(--text-dark);
             background-color: #fff;
         }
-        
+        .dropdown-item {
+    padding: 0.75rem 1.5rem;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.dropdown-item:active {
+    background-color: rgba(0,0,0,0.1);
+}
+
+/* Fix dropdown toggle arrow */
+.dropdown-toggle::after {
+    margin-left: 0.5em;
+}
         /* Header styles */
         .navbar {
             padding: 15px 0;
@@ -697,5 +716,17 @@ if ($conn->connect_error) {
             };
         };
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('#userDropdown').addEventListener('click', function(e) {
+    e.preventDefault();
+    var dropdown = bootstrap.Dropdown.getOrCreateInstance(this);
+    dropdown.toggle();
+  });
+});
+    </script>
+
+<script src="https://kit.fontawesome.com/yourkitcode.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

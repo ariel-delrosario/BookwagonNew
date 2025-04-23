@@ -36,6 +36,17 @@ if(isset($_GET['theme']) && $_GET['theme'] != '') {
     $params[] = $_GET['theme'];
 }
 
+// Add new filters for book type and condition
+if(isset($_GET['book_type']) && $_GET['book_type'] != '') {
+    $where_clauses[] = "book_type = ?";
+    $params[] = $_GET['book_type'];
+}
+
+if(isset($_GET['condition']) && $_GET['condition'] != '') {
+    $where_clauses[] = "`condition` = ?";
+    $params[] = $_GET['condition'];
+}
+
 if(isset($_GET['search']) && $_GET['search'] != '') {
     $where_clauses[] = "(title LIKE ? OR author LIKE ? OR description LIKE ?)";
     $search_term = '%' . $_GET['search'] . '%';
@@ -122,6 +133,22 @@ echo '<style>
         right: 10px;
         z-index: 10;
     }
+    .book-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+    }
+    .book-link:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+    .book-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+    }
 </style>';
 
 // Display books
@@ -144,48 +171,77 @@ if ($result->num_rows > 0) {
             $cover_image = 'uploads/covers/default_book.jpg';
         }
         
-        // Display the book
+        // Get condition class for badge
+        $conditionClass = 'bg-success';
+        switch($book['condition'] ?? 'New') {
+            case 'New':
+                $conditionClass = 'bg-success';
+                break;
+            case 'Like New':
+                $conditionClass = 'bg-success';
+                break;
+            case 'Very Good':
+            case 'Good':
+                $conditionClass = 'bg-info';
+                break;
+            case 'Fair':
+                $conditionClass = 'bg-warning';
+                break;
+            case 'Poor':
+                $conditionClass = 'bg-danger';
+                break;
+        }
+        
+        // Display the book with link to book_details.php
         echo '
         <div class="col">
             <div class="card h-100 book-card">
-                <div class="book-img-container">
-                   <img src="' . $cover_image . '" 
-                    class="book-img" 
-                    alt="' . $book['title'] . '" 
-                    loading="lazy"
-                    onerror="this.src=\'uploads/covers/default_book.jpg\'">
+                <a href="book_details.php?id=' . $book['book_id'] . '" class="book-link">
+                    <div class="book-img-container">
+                        <img src="' . $cover_image . '" 
+                            class="book-img" 
+                            alt="' . $book['title'] . '" 
+                            loading="lazy"
+                            onerror="this.src=\'uploads/covers/default_book.jpg\'">
+                            
+                        <!-- Book Type & Condition Badges -->
+                        <div class="book-badge">
+                            <span class="badge bg-primary mb-1 d-block">' . htmlspecialchars($book['book_type'] ?? 'Paperback') . '</span>
+                            <span class="badge ' . $conditionClass . ' d-block">' . htmlspecialchars($book['condition'] ?? 'New') . '</span>
+                        </div>
 
-                    <div class="card-actions">
-                        <div class="action-icon">
-                            <i class="far fa-heart" data-book-id="' . $book['book_id'] . '"></i>
-                        </div>
-                        <div class="action-icon">
-                            <i class="far fa-bookmark" data-book-id="' . $book['book_id'] . '"></i>
+                        <div class="card-actions">
+                            <div class="action-icon">
+                                <i class="far fa-heart" data-book-id="' . $book['book_id'] . '"></i>
+                            </div>
+                            <div class="action-icon">
+                                <i class="far fa-bookmark" data-book-id="' . $book['book_id'] . '"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-1">' . $book['author'] . '</h6>
-                    <h5 class="card-title">' . $book['title'] . '</h5>
-                    <div class="book-rating mb-2">';
-                    
-                    // Generate star rating
-                    for($i = 1; $i <= 5; $i++) {
-                        if($i <= $rating) {
-                            echo '<i class="fas fa-star"></i>';
-                        } else {
-                            echo '<i class="fas fa-star star-gray"></i>';
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-1">' . $book['author'] . '</h6>
+                        <h5 class="card-title">' . $book['title'] . '</h5>
+                        <div class="book-rating mb-2">';
+                        
+                        // Generate star rating
+                        for($i = 1; $i <= 5; $i++) {
+                            if($i <= $rating) {
+                                echo '<i class="fas fa-star"></i>';
+                            } else {
+                                echo '<i class="fas fa-star star-gray"></i>';
+                            }
                         }
-                    }
-                    
-                    echo '</div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="book-price">₱' . number_format($book['price'], 2) . '</span>
-                            <div class="price-per-week">₱' . number_format($rent_price, 2) . '/week</div>
+                        
+                        echo '</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="book-price">₱' . number_format($book['price'], 2) . '</span>
+                                <div class="price-per-week">₱' . number_format($rent_price, 2) . '/week</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
         </div>';
     }

@@ -1,47 +1,48 @@
 <?php
-// Include connection to database and session
-include("connect.php");
 include("session.php");
+include("connect.php");
 
-$userType = $_SESSION['usertype'] ?? '';
-$userId = $_SESSION['id'] ?? 0;
-
-// Ensure only sellers can access this page
-if ($userType !== 'seller') {
-    // Return error response
+// Ensure user is logged in
+if (!isset($_SESSION['id'])) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Only sellers can access this resource.']);
-    exit;
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+    exit();
 }
 
 // Check if book ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Book ID is required.']);
-    exit;
+    echo json_encode(['success' => false, 'message' => 'Book ID is required']);
+    exit();
 }
 
-$book_id = intval($_GET['id']);
+$bookId = intval($_GET['id']);
+$userId = $_SESSION['id'];
 
-// Query to fetch book details
-$query = "SELECT * FROM books WHERE book_id = ? AND user_id = ?";
+// Get book details
+$query = "SELECT * FROM books WHERE book_id = ?";
 $stmt = $conn->prepare($query);
-$stmt->bind_param("ii", $book_id, $userId);
+$stmt->bind_param("i", $bookId);
 $stmt->execute();
 $result = $stmt->get_result();
 
-if ($result->num_rows === 1) {
-    $book = $result->fetch_assoc();
-    
-    // Return book details as JSON
+if ($result->num_rows === 0) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => true, 'book' => $book]);
-} else {
-    // Book not found or doesn't belong to the current user
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Book not found or you do not have permission to access it.']);
+    echo json_encode(['success' => false, 'message' => 'Book not found']);
+    exit();
 }
 
-$stmt->close();
-$conn->close();
+$book = $result->fetch_assoc();
+
+// Check if the book belongs to the user (for sellers)
+if ($_SESSION['usertype'] === 'seller' && $book['user_id'] != $userId) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'You do not have permission to access this book']);
+    exit();
+}
+
+// Return book details
+header('Content-Type: application/json');
+echo json_encode(['success' => true, 'book' => $book]);
+exit();
 ?>

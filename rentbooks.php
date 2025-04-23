@@ -136,6 +136,35 @@ if ($conn->connect_error) {
             justify-content: center;
             color: #999;
         }
+        /* Book badges */
+        .book-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        /* Book link styles */
+        .book-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            height: 100%;
+        }
+        .book-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+        /* Filter section scrollable on mobile */
+        @media (max-width: 992px) {
+            .filter-section {
+                max-height: 300px;
+                overflow-y: auto;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+                margin-bottom: 20px;
+                padding-bottom: 20px;
+            }
+        }
     </style>
 </head>
 
@@ -162,6 +191,56 @@ if ($conn->connect_error) {
                     <div class="d-flex gap-2">
                         <input type="text" class="form-control" placeholder="Min" name="min_price" id="min_price" value="<?php echo isset($_GET['min_price']) ? $_GET['min_price'] : ''; ?>">
                         <input type="text" class="form-control" placeholder="Max" name="max_price" id="max_price" value="<?php echo isset($_GET['max_price']) ? $_GET['max_price'] : ''; ?>">
+                    </div>
+                </div>
+                
+                <!-- Book Type Filter (New) -->
+                <div class="filter-group">
+                    <h5 class="filter-title">Book Type</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="book_type" id="type_paperback" value="Paperback" <?php echo (isset($_GET['book_type']) && $_GET['book_type'] == 'Paperback') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_paperback">Paperback</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="book_type" id="type_hardcover" value="Hardcover" <?php echo (isset($_GET['book_type']) && $_GET['book_type'] == 'Hardcover') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_hardcover">Hardcover</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="book_type" id="type_ebook" value="E-book" <?php echo (isset($_GET['book_type']) && $_GET['book_type'] == 'E-book') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_ebook">E-book</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="book_type" id="type_audiobook" value="Audiobook" <?php echo (isset($_GET['book_type']) && $_GET['book_type'] == 'Audiobook') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_audiobook">Audiobook</label>
+                    </div>
+                </div>
+                
+                <!-- Condition Filter (New) -->
+                <div class="filter-group">
+                    <h5 class="filter-title">Condition</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_new" value="New" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'New') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_new">New</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_like_new" value="Like New" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'Like New') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_like_new">Like New</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_very_good" value="Very Good" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'Very Good') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_very_good">Very Good</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_good" value="Good" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'Good') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_good">Good</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_fair" value="Fair" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'Fair') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_fair">Fair</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input filter-checkbox" type="checkbox" name="condition" id="condition_poor" value="Poor" <?php echo (isset($_GET['condition']) && $_GET['condition'] == 'Poor') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="condition_poor">Poor</label>
                     </div>
                 </div>
                 
@@ -360,7 +439,12 @@ if ($conn->connect_error) {
             
             // Add selected checkbox filters
             document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                filters[checkbox.name] = checkbox.value;
+                // Group multiple checkboxes of the same name with commas
+                if (filters[checkbox.name]) {
+                    filters[checkbox.name] += ',' + checkbox.value;
+                } else {
+                    filters[checkbox.name] = checkbox.value;
+                }
             });
             
             // Convert filters to URL params
@@ -408,7 +492,10 @@ if ($conn->connect_error) {
         function attachEventListeners() {
             // Heart icons
             document.querySelectorAll('.fa-heart').forEach(icon => {
-                icon.addEventListener('click', function() {
+                icon.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent following the link
+                    e.stopPropagation(); // Stop the event from bubbling up
+                    
                     this.classList.toggle('far');
                     this.classList.toggle('fas');
                     
@@ -435,7 +522,10 @@ if ($conn->connect_error) {
             
             // Bookmark icons
             document.querySelectorAll('.fa-bookmark').forEach(icon => {
-                icon.addEventListener('click', function() {
+                icon.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent following the link
+                    e.stopPropagation(); // Stop the event from bubbling up
+                    
                     this.classList.toggle('far');
                     this.classList.toggle('fas');
                     

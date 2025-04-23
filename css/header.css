@@ -1,0 +1,43 @@
+.navbar {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.navbar-brand img {
+    height: 60px;
+    
+}.user-menu .dropdown-toggle {
+    border: none;
+    background: transparent;
+}
+
+.user-menu .dropdown-toggle::after {
+    display: none;
+}
+
+.user-menu .user-name {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.2;
+    color: #333;
+}
+
+.user-menu .user-phone {
+    font-size: 14px;
+    color: #666;
+}
+
+.user-menu .dropdown-menu {
+    min-width: 250px;
+    padding: 10px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.user-menu .dropdown-item i {
+    width: 16px;
+    text-align: center;
+}
+
+.user-menu .dropdown-item:hover {
+    background-color: #f8f9fa;
+}

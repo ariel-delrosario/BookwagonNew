@@ -6,7 +6,7 @@
       </a>
       <a href="rentbooks.php" class="active">
          
-          Rentbooks
+          Rent books
       </a>
       <a href="grocery.php">
           

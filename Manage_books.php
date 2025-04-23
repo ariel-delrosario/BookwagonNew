@@ -53,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $isbn = mysqli_real_escape_string($conn, $_POST['isbn']);
             $genre = mysqli_real_escape_string($conn, $_POST['genre']);
             $theme = mysqli_real_escape_string($conn, $_POST['theme']);
+            // Add new fields
+            $book_type = mysqli_real_escape_string($conn, $_POST['book_type']);
+            $condition = mysqli_real_escape_string($conn, $_POST['condition']);
+            $damages = mysqli_real_escape_string($conn, $_POST['damages']);
             $popularity = mysqli_real_escape_string($conn, $_POST['popularity']);
             $price = floatval($_POST['price']);
             $rent_price = floatval($_POST['rent_price']);
@@ -70,15 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
-            // Insert book into database
-            $query = "INSERT INTO books (user_id, title, author, ISBN, genre, theme, popularity, price, rent_price, stock, description, cover_image) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            // Insert book into database with new fields
+            $query = "INSERT INTO books (user_id, title, author, ISBN, genre, theme, book_type, `condition`, damages, popularity, price, rent_price, stock, description, cover_image) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-              // Add this before your INSERT query
-              error_log("Cover image path before DB insert: " . $cover_image);
+            // Add this before your INSERT query
+            error_log("Cover image path before DB insert: " . $cover_image);
 
             $stmt = $conn->prepare($query);
-            $stmt->bind_param("issssssddiss", $userId, $title, $author, $isbn, $genre, $theme, $popularity, $price, $rent_price, $stock, $description, $cover_image);
+            $stmt->bind_param("isssssssssddiis", $userId, $title, $author, $isbn, $genre, $theme, $book_type, $condition, $damages, $popularity, $price, $rent_price, $stock, $description, $cover_image);
             if ($stmt->execute()) {
                 $success_message = "Book added successfully!";
                 // Redirect to prevent form resubmission on refresh
@@ -87,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $stmt->close();
-            }
+        }
         
         // Edit existing book
         elseif ($_POST['action'] === 'edit' && isset($_POST['book_id'])) {
@@ -111,6 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isbn = mysqli_real_escape_string($conn, $_POST['isbn']);
                     $genre = mysqli_real_escape_string($conn, $_POST['genre']);
                     $theme = mysqli_real_escape_string($conn, $_POST['theme']);
+                    // Add new fields
+                    $book_type = mysqli_real_escape_string($conn, $_POST['book_type']);
+                    $condition = mysqli_real_escape_string($conn, $_POST['condition']);
+                    $damages = mysqli_real_escape_string($conn, $_POST['damages']);
                     $popularity = mysqli_real_escape_string($conn, $_POST['popularity']);
                     $price = floatval($_POST['price']);
                     $rent_price = floatval($_POST['rent_price']);
@@ -131,18 +139,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Update book in database
                     if (!empty($cover_image_query)) {
-                        $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, popularity = ?, 
+                        $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, 
+                                  book_type = ?, `condition` = ?, damages = ?, popularity = ?, 
                                   price = ?, rent_price = ?, stock = ?, description = ?, cover_image = ? 
                                   WHERE book_id = ? AND user_id = ?";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param("ssssssddisii", $title, $author, $isbn, $genre, $theme, $popularity, 
+                        $stmt->bind_param("sssssssssddissii", $title, $author, $isbn, $genre, $theme, 
+                                          $book_type, $condition, $damages, $popularity, 
                                           $price, $rent_price, $stock, $description, $cover_image, $book_id, $userId);
                     } else {
-                        $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, popularity = ?, 
+                        $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, 
+                                  book_type = ?, `condition` = ?, damages = ?, popularity = ?, 
                                   price = ?, rent_price = ?, stock = ?, description = ? 
                                   WHERE book_id = ? AND user_id = ?";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param("ssssssddiiii", $title, $author, $isbn, $genre, $theme, $popularity, 
+                        $stmt->bind_param("sssssssssddisii", $title, $author, $isbn, $genre, $theme, 
+                                         $book_type, $condition, $damages, $popularity, 
                                          $price, $rent_price, $stock, $description, $book_id, $userId);
                     }
                     
@@ -359,6 +371,16 @@ while ($row = $theme_result->fetch_assoc()) {
         .modal-header {
             background-color: #f8f9fa;
         }
+        
+        /* Grid view styles */
+        .book-grid {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .object-fit-cover {
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
@@ -389,21 +411,22 @@ while ($row = $theme_result->fetch_assoc()) {
 
     <!-- Topbar -->
     <div class="topbar">
-        <div class="topbar-icons">
-            <a href="#" title="Manage Books">
-                <i class="fas fa-book"></i>
-            </a>
-            <a href="#" title="Notifications">
-                <i class="fas fa-bell"></i>
-            </a>
-            <a href="#" title="Messages">
-                <i class="fas fa-envelope"></i>
-            </a>
-            <a href="#" title="Profile">
-                <img src="img/profile-pic.jpg" alt="Profile" class="rounded-circle" height="30" width="30">
-            </a>
-        </div>
+    <div class="topbar-icons">
+        <a href="dashboard.php" class="nav-link" title="Home">Home</a>
+        <a href="#" title="Manage Books">
+            <i class="fas fa-book"></i>
+        </a>
+        <a href="#" title="Notifications">
+            <i class="fas fa-bell"></i>
+        </a>
+        <a href="#" title="Messages">
+            <i class="fas fa-envelope"></i>
+        </a>
+        <a href="#" class="nav-link">
+            <?php echo isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email']; ?>
+        </a>
     </div>
+</div>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -432,6 +455,14 @@ while ($row = $theme_result->fetch_assoc()) {
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Book List</h5>
                                 <div class="d-flex">
+                                    <div class="btn-group me-3">
+                                        <button class="btn btn-outline-secondary active" id="tableViewBtn">
+                                            <i class="fas fa-list"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" id="gridViewBtn">
+                                            <i class="fas fa-th-large"></i>
+                                        </button>
+                                    </div>
                                     <div class="input-group me-3" style="width: 300px;">
                                         <input type="text" class="form-control" id="searchBooks" placeholder="Search books...">
                                         <button class="btn btn-outline-secondary" type="button">
@@ -454,6 +485,8 @@ while ($row = $theme_result->fetch_assoc()) {
                                                 <th>Book</th>
                                                 <th>ISBN</th>
                                                 <th>Genre</th>
+                                                <th>Type</th>
+                                                <th>Condition</th>
                                                 <th>Price</th>
                                                 <th>Rent Price</th>
                                                 <th>Stock</th>
@@ -464,7 +497,7 @@ while ($row = $theme_result->fetch_assoc()) {
                                         <tbody>
                                             <?php if (empty($books)): ?>
                                             <tr>
-                                                <td colspan="9" class="text-center py-5">
+                                                <td colspan="11" class="text-center py-5">
                                                     <p>No books found. Add some books to get started.</p>
                                                 </td>
                                             </tr>
@@ -487,6 +520,18 @@ while ($row = $theme_result->fetch_assoc()) {
                                                     </td>
                                                     <td><?php echo htmlspecialchars($book['ISBN'] ?? 'N/A'); ?></td>
                                                     <td><?php echo htmlspecialchars($book['genre']); ?></td>
+                                                    <!-- Display Book Type -->
+                                                    <td><?php echo htmlspecialchars($book['book_type'] ?? 'Paperback'); ?></td>
+                                                    <!-- Display Condition with tooltip for damages -->
+                                                    <td>
+                                                        <?php if (!empty($book['damages'])): ?>
+                                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo htmlspecialchars($book['damages']); ?>">
+                                                            <?php echo htmlspecialchars($book['condition'] ?? 'New'); ?> <i class="fas fa-info-circle text-warning"></i>
+                                                        </span>
+                                                        <?php else: ?>
+                                                            <?php echo htmlspecialchars($book['condition'] ?? 'New'); ?>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td>₱<?php echo number_format($book['price'], 2); ?></td>
                                                     <td>₱<?php echo number_format($book['rent_price'] ?? 0, 2); ?></td>
                                                     <td>
@@ -535,6 +580,110 @@ while ($row = $theme_result->fetch_assoc()) {
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                <!-- Book Grid View (Alternative to Table View) -->
+                                <div class="row book-grid" id="bookGridView" style="display: none;">
+                                    <?php if (empty($books)): ?>
+                                    <div class="col-12 text-center py-5">
+                                        <p>No books found. Add some books to get started.</p>
+                                    </div>
+                                    <?php else: ?>
+                                        <?php foreach ($books as $book): ?>
+                                        <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                                            <div class="card h-100">
+                                                <div class="card-img-top position-relative" style="height: 200px; overflow: hidden;">
+                                                    <img src="<?php echo !empty($book['cover_image']) ? $book['cover_image'] : 'img/default-book-cover.jpg'; ?>" 
+                                                         alt="<?php echo htmlspecialchars($book['title']); ?>"
+                                                         class="w-100 h-100 object-fit-cover">
+                                                    
+                                                    <!-- Book Type Badge -->
+                                                    <span class="position-absolute top-0 start-0 badge bg-info m-2">
+                                                        <?php echo htmlspecialchars($book['book_type'] ?? 'Paperback'); ?>
+                                                    </span>
+                                                    
+                                                    <!-- Condition Badge -->
+                                                    <span class="position-absolute top-0 end-0 badge 
+                                                        <?php 
+                                                        $conditionClass = 'bg-success';
+                                                        switch($book['condition'] ?? 'New') {
+                                                            case 'New':
+                                                                $conditionClass = 'bg-success';
+                                                                break;
+                                                            case 'Like New':
+                                                                $conditionClass = 'bg-success';
+                                                                break;
+                                                            case 'Very Good':
+                                                                $conditionClass = 'bg-info';
+                                                                break;
+                                                            case 'Good':
+                                                                $conditionClass = 'bg-info';
+                                                                break;
+                                                            case 'Fair':
+                                                                $conditionClass = 'bg-warning';
+                                                                break;
+                                                            case 'Poor':
+                                                                $conditionClass = 'bg-danger';
+                                                                break;
+                                                        }
+                                                        echo $conditionClass;
+                                                        ?> m-2">
+                                                        <?php echo htmlspecialchars($book['condition'] ?? 'New'); ?>
+                                                    </span>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h5 class="card-title text-truncate"><?php echo htmlspecialchars($book['title']); ?></h5>
+                                                    <p class="card-text text-muted mb-1">By <?php echo htmlspecialchars($book['author']); ?></p>
+                                                    <p class="card-text mb-1">
+                                                        <small class="text-muted">ISBN: <?php echo htmlspecialchars($book['ISBN'] ?? 'N/A'); ?></small>
+                                                    </p>
+                                                    <p class="card-text mb-1">
+                                                        <small class="text-muted">Genre: <?php echo htmlspecialchars($book['genre']); ?></small>
+                                                    </p>
+                                                    
+                                                    <!-- Damages Note (if any) -->
+                                                    <?php if (!empty($book['damages'])): ?>
+                                                    <p class="card-text mb-1">
+                                                        <small class="text-warning">
+                                                            <i class="fas fa-exclamation-triangle"></i> 
+                                                            <?php echo htmlspecialchars(mb_strimwidth($book['damages'], 0, 30, "...")); ?>
+                                                        </small>
+                                                    </p>
+                                                    <?php endif; ?>
+                                                    
+                                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                                        <div>
+                                                            <p class="mb-0 fw-bold">₱<?php echo number_format($book['price'], 2); ?></p>
+                                                            <small class="text-muted">Rent: ₱<?php echo number_format($book['rent_price'] ?? 0, 2); ?>/wk</small>
+                                                        </div>
+                                                        <div>
+                                                            <span class="badge <?php echo $book['stock'] > 0 ? 'bg-success' : 'bg-danger'; ?>">
+                                                                <?php echo $book['stock'] > 0 ? 'In Stock: ' . $book['stock'] : 'Out of Stock'; ?>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card-footer bg-white border-0">
+                                                    <div class="d-flex justify-content-end">
+                                                        <button class="btn btn-sm btn-outline-primary me-2 edit-book" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#editBookModal" 
+                                                                data-book-id="<?php echo $book['book_id']; ?>">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger delete-book" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#deleteBookModal" 
+                                                                data-book-id="<?php echo $book['book_id']; ?>"
+                                                                data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -582,8 +731,35 @@ while ($row = $theme_result->fetch_assoc()) {
                                         <option value="">Select Genre First</option>
                                     </select>
                                 </div>
+                                <!-- New Field: Book Type -->
+                                <div class="mb-3">
+                                    <label for="book_type" class="form-label">Book Type</label>
+                                    <select class="form-select" id="book_type" name="book_type" required>
+                                        <option value="Paperback">Paperback</option>
+                                        <option value="Hardcover">Hardcover</option>
+                                        <option value="E-book">E-book</option>
+                                        <option value="Audiobook">Audiobook</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="col-md-6">
+                                <!-- New Field: Condition -->
+                                <div class="mb-3">
+                                    <label for="condition" class="form-label">Condition</label>
+                                    <select class="form-select" id="condition" name="condition" required>
+                                        <option value="New">New</option>
+                                        <option value="Like New">Like New</option>
+                                        <option value="Very Good">Very Good</option>
+                                        <option value="Good">Good</option>
+                                        <option value="Fair">Fair</option>
+                                        <option value="Poor">Poor</option>
+                                    </select>
+                                </div>
+                                <!-- New Field: Damages -->
+                                <div class="mb-3">
+                                    <label for="damages" class="form-label">Damages (if any)</label>
+                                    <textarea class="form-control" id="damages" name="damages" rows="2" placeholder="Describe any damages or defects..."></textarea>
+                                </div>
                                 <div class="mb-3">
                                     <label for="price" class="form-label">Price (Whole book) (₱)</label>
                                     <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
@@ -601,7 +777,7 @@ while ($row = $theme_result->fetch_assoc()) {
                                     <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/*">
                                     <div class="form-text">Recommended size: 400x600 pixels</div>
                                 </div>
-                                <!-- Popularity is now hidden and will be set by the system -->
+                                <!-- Popularity is hidden and will be set by the system -->
                                 <input type="hidden" name="popularity" value="New Releases">
                             </div>
                             <div class="col-12">
@@ -660,8 +836,35 @@ while ($row = $theme_result->fetch_assoc()) {
                                         <label for="edit_theme" class="form-label">Theme</label>
                                         <input type="text" class="form-control" id="edit_theme" name="theme" list="themeList" required>
                                     </div>
+                                    <!-- New Field: Book Type -->
+                                    <div class="mb-3">
+                                        <label for="edit_book_type" class="form-label">Book Type</label>
+                                        <select class="form-select" id="edit_book_type" name="book_type" required>
+                                            <option value="Paperback">Paperback</option>
+                                            <option value="Hardcover">Hardcover</option>
+                                            <option value="E-book">E-book</option>
+                                            <option value="Audiobook">Audiobook</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
+                                    <!-- New Field: Condition -->
+                                    <div class="mb-3">
+                                        <label for="edit_condition" class="form-label">Condition</label>
+                                        <select class="form-select" id="edit_condition" name="condition" required>
+                                            <option value="New">New</option>
+                                            <option value="Like New">Like New</option>
+                                            <option value="Very Good">Very Good</option>
+                                            <option value="Good">Good</option>
+                                            <option value="Fair">Fair</option>
+                                            <option value="Poor">Poor</option>
+                                        </select>
+                                    </div>
+                                    <!-- New Field: Damages -->
+                                    <div class="mb-3">
+                                        <label for="edit_damages" class="form-label">Damages (if any)</label>
+                                        <textarea class="form-control" id="edit_damages" name="damages" rows="2" placeholder="Describe any damages or defects..."></textarea>
+                                    </div>
                                     <div class="mb-3">
                                         <label for="edit_price" class="form-label">Price (₱)</label>
                                         <input type="number" class="form-control" id="edit_price" name="price" step="0.01" min="0" required>
@@ -680,7 +883,7 @@ while ($row = $theme_result->fetch_assoc()) {
                                         <div class="form-text">Leave empty to keep current image</div>
                                         <div id="current_cover_preview" class="mt-2"></div>
                                     </div>
-                                    <!-- Popularity is now hidden and will maintain its current value -->
+                                    <!-- Popularity is hidden and will maintain its current value -->
                                     <input type="hidden" name="popularity" id="edit_popularity">
                                 </div>
                                 <div class="col-12">
@@ -723,6 +926,19 @@ while ($row = $theme_result->fetch_assoc()) {
             </div>
         </div>
     </div>
+    
+    <!-- Datalists for edit form -->
+    <datalist id="genreList">
+        <?php foreach ($genres as $genre): ?>
+            <option value="<?php echo htmlspecialchars($genre); ?>">
+        <?php endforeach; ?>
+    </datalist>
+    
+    <datalist id="themeList">
+        <?php foreach ($themes as $theme): ?>
+            <option value="<?php echo htmlspecialchars($theme); ?>">
+        <?php endforeach; ?>
+    </datalist>
     
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -818,6 +1034,55 @@ while ($row = $theme_result->fetch_assoc()) {
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips for damage info icons
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Show/hide damages field based on condition selection
+            const conditionSelect = document.getElementById('condition');
+            const damagesField = document.getElementById('damages').closest('.mb-3');
+            
+            if (conditionSelect && damagesField) {
+                // Initial state check
+                updateDamagesVisibility(conditionSelect.value);
+                
+                // Listen for changes
+                conditionSelect.addEventListener('change', function() {
+                    updateDamagesVisibility(this.value);
+                });
+            }
+            
+            // Same for edit modal
+            const editConditionSelect = document.getElementById('edit_condition');
+            const editDamagesField = document.getElementById('edit_damages').closest('.mb-3');
+            
+            if (editConditionSelect && editDamagesField) {
+                editConditionSelect.addEventListener('change', function() {
+                    updateDamagesVisibility(this.value, true);
+                });
+            }
+            
+            // Function to show/hide damages field based on condition
+            function updateDamagesVisibility(condition, isEdit = false) {
+                const damagesField = isEdit 
+                    ? document.getElementById('edit_damages').closest('.mb-3')
+                    : document.getElementById('damages').closest('.mb-3');
+                
+                // Show damages field only for non-new conditions
+                if (condition === 'New') {
+                    damagesField.style.display = 'none';
+                    if (isEdit) {
+                        document.getElementById('edit_damages').value = '';
+                    } else {
+                        document.getElementById('damages').value = '';
+                    }
+                } else {
+                    damagesField.style.display = 'block';
+                }
+            }
+            
             // Edit Book Modal
             const editBookModal = document.getElementById('editBookModal');
             const editBookLoader = document.getElementById('editBookLoader');
@@ -852,13 +1117,18 @@ while ($row = $theme_result->fetch_assoc()) {
                             // Set genre and update theme options
                             const genreSelect = document.getElementById('edit_genre');
                             genreSelect.value = book.genre;
-                            updateThemeOptions('edit_genre', 'edit_theme');
                             
-                            // After themes are populated, set the current theme
-                            setTimeout(() => {
-                                const themeSelect = document.getElementById('edit_theme');
-                                themeSelect.value = book.theme;
-                            }, 100);
+                            // Set theme
+                            const themeSelect = document.getElementById('edit_theme');
+                            themeSelect.value = book.theme;
+                            
+                            // Set new fields
+                            document.getElementById('edit_book_type').value = book.book_type || 'Paperback';
+                            document.getElementById('edit_condition').value = book.condition || 'New';
+                            document.getElementById('edit_damages').value = book.damages || '';
+                            
+                            // Update damages visibility based on condition
+                            updateDamagesVisibility(book.condition || 'New', true);
                             
                             document.getElementById('edit_popularity').value = book.popularity || 'New Releases';
                             document.getElementById('edit_price').value = book.price;
@@ -927,7 +1197,9 @@ while ($row = $theme_result->fetch_assoc()) {
                 searchBooks.addEventListener('input', function() {
                     const searchTerm = this.value.toLowerCase().trim();
                     const bookRows = document.querySelectorAll('tbody tr');
+                    const bookCards = document.querySelectorAll('.book-grid .col-md-6');
                     
+                    // Search in table view
                     bookRows.forEach(row => {
                         // Skip empty state row
                         if (row.querySelector('td[colspan]')) return;
@@ -936,14 +1208,39 @@ while ($row = $theme_result->fetch_assoc()) {
                         const author = row.querySelector('.d-flex .text-muted')?.textContent.toLowerCase() || '';
                         const isbn = row.cells[2]?.textContent.toLowerCase() || '';
                         const genre = row.cells[3]?.textContent.toLowerCase() || '';
+                        const type = row.cells[4]?.textContent.toLowerCase() || '';
+                        const condition = row.cells[5]?.textContent.toLowerCase() || '';
                         
                         if (title.includes(searchTerm) || 
                             author.includes(searchTerm) || 
                             isbn.includes(searchTerm) || 
-                            genre.includes(searchTerm)) {
+                            genre.includes(searchTerm) ||
+                            type.includes(searchTerm) ||
+                            condition.includes(searchTerm)) {
                             row.style.display = '';
                         } else {
                             row.style.display = 'none';
+                        }
+                    });
+                    
+                    // Search in grid view
+                    bookCards.forEach(card => {
+                        const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+                        const author = card.querySelector('.card-text.text-muted')?.textContent.toLowerCase() || '';
+                        const isbn = card.querySelector('small:nth-of-type(1)')?.textContent.toLowerCase() || '';
+                        const genre = card.querySelector('small:nth-of-type(2)')?.textContent.toLowerCase() || '';
+                        const type = card.querySelector('.badge.bg-info')?.textContent.toLowerCase() || '';
+                        const condition = card.querySelector('.badge:not(.bg-info):not(.bg-success):not(.bg-danger)')?.textContent.toLowerCase() || '';
+                        
+                        if (title.includes(searchTerm) || 
+                            author.includes(searchTerm) || 
+                            isbn.includes(searchTerm) || 
+                            genre.includes(searchTerm) ||
+                            type.includes(searchTerm) ||
+                            condition.includes(searchTerm)) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
                         }
                     });
                     
@@ -956,7 +1253,7 @@ while ($row = $theme_result->fetch_assoc()) {
                         const noResultsRow = document.createElement('tr');
                         noResultsRow.id = 'no-results-row';
                         noResultsRow.innerHTML = `
-                            <td colspan="9" class="text-center py-3">
+                            <td colspan="11" class="text-center py-3">
                                 <p>No books found matching "${searchTerm}"</p>
                             </td>
                         `;
@@ -966,7 +1263,44 @@ while ($row = $theme_result->fetch_assoc()) {
                     }
                 });
             }
+            
+            // View toggling (Table/Grid)
+            const tableViewBtn = document.getElementById('tableViewBtn');
+            const gridViewBtn = document.getElementById('gridViewBtn');
+            const tableView = document.querySelector('.table-responsive');
+            const gridView = document.getElementById('bookGridView');
+
+            if (tableViewBtn && gridViewBtn && tableView && gridView) {
+                // Table view (default)
+                tableViewBtn.addEventListener('click', function() {
+                    tableView.style.display = 'block';
+                    gridView.style.display = 'none';
+                    tableViewBtn.classList.add('active');
+                    gridViewBtn.classList.remove('active');
+                    
+                    // Save preference to localStorage
+                    localStorage.setItem('bookwagon_view_preference', 'table');
+                });
+                
+                // Grid view
+                gridViewBtn.addEventListener('click', function() {
+                    tableView.style.display = 'none';
+                    gridView.style.display = 'flex';
+                    gridViewBtn.classList.add('active');
+                    tableViewBtn.classList.remove('active');
+                    
+                    // Save preference to localStorage
+                    localStorage.setItem('bookwagon_view_preference', 'grid');
+                });
+                
+                // Load saved preference (if any)
+                const savedViewPreference = localStorage.getItem('bookwagon_view_preference');
+                if (savedViewPreference === 'grid') {
+                    gridViewBtn.click();
+                }
+            }
         });
     </script>
+    
 </body>
 </html>

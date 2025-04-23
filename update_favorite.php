@@ -2,58 +2,57 @@
 include("session.php");
 include("connect.php");
 
-if(!isset($_SESSION['user_id'])) {
-    // Return error if user is not logged in
-    header('Content-Type: application/json');
+// Check if user is logged in
+if (!isset($_SESSION['id'])) {
     echo json_encode(['success' => false, 'message' => 'User not logged in']);
     exit;
 }
 
-if(isset($_POST['book_id']) && isset($_POST['is_favorite'])) {
-    $book_id = $_POST['book_id'];
-    $is_favorite = $_POST['is_favorite'];
-    $user_id = $_SESSION['user_id'];
-    
-    $conn = new mysqli("localhost", "root", "", "bookwagon_db"); // Replace with your actual connection details
-    
-    if ($conn->connect_error) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
-        exit;
-    }
-    
-    // Check if favorite already exists
-    $check_stmt = $conn->prepare("SELECT * FROM favorites WHERE user_id = ? AND book_id = ?");
-    $check_stmt->bind_param("ii", $user_id, $book_id);
-    $check_stmt->execute();
-    $result = $check_stmt->get_result();
-    
-    if($result->num_rows > 0) {
-        // Update existing record
-        if($is_favorite == 1) {
-            $update_stmt = $conn->prepare("UPDATE favorites SET is_favorite = 1 WHERE user_id = ? AND book_id = ?");
-        } else {
-            $update_stmt = $conn->prepare("UPDATE favorites SET is_favorite = 0 WHERE user_id = ? AND book_id = ?");
-        }
-        $update_stmt->bind_param("ii", $user_id, $book_id);
-        $success = $update_stmt->execute();
-    } else {
-        // Insert new record
-        $insert_stmt = $conn->prepare("INSERT INTO favorites (user_id, book_id, is_favorite) VALUES (?, ?, ?)");
-        $insert_stmt->bind_param("iii", $user_id, $book_id, $is_favorite);
-        $success = $insert_stmt->execute();
-    }
-    
-    header('Content-Type: application/json');
-    if($success) {
-        echo json_encode(['success' => true, 'message' => 'Favorite updated successfully']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to update favorite']);
-    }
-    
-    $conn->close();
-} else {
-    header('Content-Type: application/json');
+// Get user ID
+$userId = $_SESSION['id'];
+
+// Check if required parameters are provided
+if (!isset($_POST['book_id']) || !isset($_POST['is_favorite'])) {
     echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+    exit;
 }
+
+$bookId = intval($_POST['book_id']);
+$isFavorite = intval($_POST['is_favorite']) ? 1 : 0;
+
+// First check if the record exists
+$checkQuery = "SELECT * FROM user_favorites WHERE user_id = ? AND book_id = ?";
+$checkStmt = $conn->prepare($checkQuery);
+$checkStmt->bind_param("ii", $userId, $bookId);
+$checkStmt->execute();
+$result = $checkStmt->get_result();
+
+if ($result->num_rows > 0) {
+    // Record exists - update it
+    if ($isFavorite) {
+        $query = "UPDATE user_favorites SET is_favorite = 1 WHERE user_id = ? AND book_id = ?";
+    } else {
+        $query = "UPDATE user_favorites SET is_favorite = 0 WHERE user_id = ? AND book_id = ?";
+    }
+} else {
+    // Record doesn't exist - insert it
+    $query = "INSERT INTO user_favorites (user_id, book_id, is_favorite) VALUES (?, ?, ?)";
+}
+
+$stmt = $conn->prepare($query);
+
+if ($result->num_rows > 0) {
+    $stmt->bind_param("ii", $userId, $bookId);
+} else {
+    $stmt->bind_param("iii", $userId, $bookId, $isFavorite);
+}
+
+if ($stmt->execute()) {
+    echo json_encode(['success' => true]);
+} else {
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+}
+
+$stmt->close();
+$conn->close();
 ?>
