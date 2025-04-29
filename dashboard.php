@@ -367,7 +367,7 @@ if ($conn->connect_error) {
          
           Rentbooks
       </a>
-      <a href="grocery.php">
+      <a href="explore.php">
           
           Explore
       </a>

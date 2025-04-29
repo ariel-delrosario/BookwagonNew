@@ -16,6 +16,7 @@ if (isset($_GET['book_id']) && isset($_GET['action']) && $_GET['action'] == 'add
     $purchaseType = $_GET['purchase_type'] ?? 'buy'; // Default to buy
     $rentalWeeks = $_GET['rental_weeks'] ?? 1; // Default to 1 week
     
+    error_log("Cart Add - Book ID: $bookId, Purchase Type: $purchaseType, Rental Weeks: $rentalWeeks");
     // First check if book exists and has stock available
     $bookStmt = $conn->prepare("SELECT stock FROM books WHERE book_id = ?");
     $bookStmt->bind_param("i", $bookId);
@@ -96,7 +97,6 @@ if (isset($_POST['update_item']) && isset($_POST['cart_id'])) {
     $quantity = $_POST['quantity'];
     $purchaseType = $_POST['purchase_type'];
     $rentalWeeks = $purchaseType == 'rent' ? $_POST['rental_weeks'] : NULL;
-    
     // Get book_id from cart item
     $getCartStmt = $conn->prepare("SELECT book_id FROM cart WHERE cart_id = ? AND user_id = ?");
     $getCartStmt->bind_param("ii", $cartId, $userId);
@@ -150,6 +150,14 @@ $tax = 0;
 $shipping = 0;
 $discount = 0;
 
+
+
+
+$subtotal = 0;
+$tax = 0;
+$shipping = 0;
+$discount = 0;
+
 foreach ($cartItems as $item) {
     if ($item['purchase_type'] == 'buy') {
         $subtotal += $item['price'] * $item['quantity'];
@@ -159,9 +167,8 @@ foreach ($cartItems as $item) {
 }
 
 // Apply shipping if subtotal is less than $50
-if ($subtotal < 50) {
-    $shipping = 10;
-}
+$freeShippingThreshold = 50;
+$shipping = $subtotal < $freeShippingThreshold ? 60 : 0;
 
 // Calculate tax (10%)
 $tax = $subtotal * 0.10;
@@ -169,9 +176,26 @@ $tax = $subtotal * 0.10;
 // Calculate total
 $total = $subtotal + $tax + $shipping - $discount;
 
-// Check how much more needed for free shipping
-$freeShippingThreshold = 50;
-$amountForFreeShipping = $freeShippingThreshold - $subtotal;
+// Calculate amount needed for free shipping
+$amountForFreeShipping = max(0, $freeShippingThreshold - $subtotal);
+
+// Store in session for cart page display
+$_SESSION['cart_subtotal'] = $subtotal;
+$_SESSION['cart_tax'] = $tax;
+$_SESSION['cart_shipping'] = $shipping;
+$_SESSION['cart_total'] = $total;
+
+// Store cart details in session for checkout page
+$_SESSION['cart_details'] = [
+    'subtotal' => $subtotal,
+    'tax' => $tax,
+    'shipping' => $shipping,
+    'discount' => $discount,
+    'total' => $total,
+    'itemCount' => count($cartItems),
+    'freeShippingThreshold' => $freeShippingThreshold,
+    'amountForFreeShipping' => $amountForFreeShipping
+];
 ?>
 
 <!DOCTYPE html>
@@ -577,6 +601,14 @@ $amountForFreeShipping = $freeShippingThreshold - $subtotal;
                                             <h5 class="cart-item-title"><?php echo $item['title']; ?></h5>
                                             <div class="cart-item-attr">Author: <?php echo $item['author']; ?></div>
                                             
+                                <?php if ($item['purchase_type'] == 'rent'): ?>
+                                    <div>Rent Price: ₱<?php echo number_format($item['rent_price'] * $item['rental_weeks'], 2); ?> 
+                                        (for <?php echo $item['rental_weeks']; ?> week<?php echo $item['rental_weeks'] > 1 ? 's' : ''; ?>)
+                                    </div>
+                                <?php else: ?>
+                                    <div>Buy Price: ₱<?php echo number_format($item['price'], 2); ?></div>
+                                <?php endif; ?>
+
                                             <form action="cart.php" method="post" class="mt-3">
                                                 <input type="hidden" name="cart_id" value="<?php echo $item['cart_id']; ?>">
                                                 
@@ -719,9 +751,9 @@ $amountForFreeShipping = $freeShippingThreshold - $subtotal;
                             </div>
                             <?php endif; ?>
                             
-                            <button type="button" class="checkout-button">
+                            <a href="checkout.php" class="checkout-button text-center text-decoration-none <?php echo empty($cartItems) ? 'disabled' : ''; ?>">
                                 <i class="fas fa-lock me-2"></i> Checkout
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -736,33 +768,38 @@ $amountForFreeShipping = $freeShippingThreshold - $subtotal;
     <script>
         // Purchase type toggle
         document.addEventListener('DOMContentLoaded', function() {
-        const purchaseOptions = document.querySelectorAll('.purchase-option');
-        
-        purchaseOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                const cartId = this.getAttribute('data-cart-id');
-                const type = this.getAttribute('data-type');
-                const purchaseTypeInput = document.getElementById(`purchase_type_${cartId}`);
-                const rentDuration = document.getElementById(`rent_duration_${cartId}`);
-                
-                // Update active state
-                document.querySelectorAll(`.purchase-option[data-cart-id="${cartId}"]`).forEach(opt => {
-                    opt.classList.remove('active');
-                });
-                this.classList.add('active');
-                
-                // Update hidden input
-                purchaseTypeInput.value = type;
-                
-                // Show/hide rent duration
-                if (type === 'rent') {
-                    rentDuration.classList.add('active');
-                } else {
-                    rentDuration.classList.remove('active');
-                }
+    const purchaseOptions = document.querySelectorAll('.purchase-option');
+    
+    purchaseOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const cartId = this.getAttribute('data-cart-id');
+            const type = this.getAttribute('data-type');
+            const purchaseTypeInput = document.getElementById(`purchase_type_${cartId}`);
+            const rentDuration = document.getElementById(`rent_duration_${cartId}`);
+            
+            // Update active state
+            document.querySelectorAll(`.purchase-option[data-cart-id="${cartId}"]`).forEach(opt => {
+                opt.classList.remove('active');
             });
+            this.classList.add('active');
+            
+            // Update hidden input with the clicked purchase type
+            purchaseTypeInput.value = type;
+            
+            // Show/hide rent duration
+            if (type === 'rent') {
+                rentDuration.classList.add('active');
+            } else {
+                rentDuration.classList.remove('active');
+            }
+            
+            // Recalculate cart totals
+            recalculateCart();
         });
     });
+    
+    // Rest of your existing cart.js code...
+});
     </script>
     <script>
     // Purchase type toggle and dynamic price updates

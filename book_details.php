@@ -497,44 +497,41 @@ $rating = rand(4, 5);
                     
                     <div class="divider"></div>
                     
-                    <!-- Add to Cart Button -->
-                    <form action="cart.php" method="GET">
-                        <input type="hidden" name="book_id" value="<?php echo $book_id; ?>">
-                        <input type="hidden" name="action" value="add">
-                        <input type="hidden" name="purchase_type" value="buy">
-                        <button type="submit" class="cart-btn">
-                            <i class="fas fa-shopping-cart me-2"></i>Add to cart
-                        </button>
-                    </form>
-                    
-                    <!-- Price & Action Buttons -->
-                    <div class="price-row">
-                        <div class="price-label">
-                            ₱<?php echo number_format($book['rent_price'], 2); ?>
-                            <div class="per-week">/Week</div>
-                        </div>
-                        <form action="cart.php" method="GET" class="action-form">
-                            <input type="hidden" name="book_id" value="<?php echo $book_id; ?>">
-                            <input type="hidden" name="action" value="add">
-                            <input type="hidden" name="purchase_type" value="rent">
-                            <input type="hidden" name="rental_weeks" value="1">
-                            <button type="submit" class="action-button btn-rent">
-                                <i class="fas fa-book-open me-2"></i>Rent
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <div class="price-row">
-                        <div class="price-label">₱<?php echo number_format($book['price'], 2); ?></div>
-                        <form action="cart.php" method="GET" class="action-form">
-                            <input type="hidden" name="book_id" value="<?php echo $book_id; ?>">
-                            <input type="hidden" name="action" value="add">
-                            <input type="hidden" name="purchase_type" value="buy">
-                            <button type="submit" class="action-button btn-buy">
-                                <i class="fas fa-shopping-bag me-2"></i>Buy
-                            </button>
-                        </form>
-                    </div>
+                        <button class="cart-btn add-to-cart-btn" 
+                        data-book-id="<?php echo $book_id; ?>" 
+                        data-purchase-type="buy">
+                        <i class="fas fa-shopping-cart me-2"></i>Add to cart
+                    </button>
+
+<!-- Price & Action Buttons -->
+                            <div class="price-row">
+                                <div class="price-label">
+                                    ₱<?php echo number_format($book['rent_price'], 2); ?>
+                                    <div class="per-week">/Week</div>
+                                </div>
+                                <div class="action-form">
+                                    <label for="rental_weeks">Rental Duration (weeks):</label>
+                                    <select name="rental_weeks" id="rental_weeks" class="form-select rental-weeks-selector">
+                                        <?php for ($i = 1; $i <= 16; $i++): ?>
+                                            <option value="<?php echo $i; ?>"><?php echo $i; ?> week<?php echo ($i > 1) ? 's' : ''; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                    <button class="action-button btn-rent add-to-cart-btn" 
+                                            data-book-id="<?php echo $book_id; ?>" 
+                                            data-purchase-type="rent">
+                                        <i class="fas fa-book-open me-2"></i>Rent
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="price-row">
+                                <div class="price-label">₱<?php echo number_format($book['price'], 2); ?></div>
+                                <button class="action-button btn-buy add-to-cart-btn" 
+                                        data-book-id="<?php echo $book_id; ?>" 
+                                        data-purchase-type="buy">
+                                    <i class="fas fa-shopping-bag me-2"></i>Buy
+                                </button>
+                            </div>
                     
                     <!-- Accordion for Seller & Book Details -->
                     <div class="book-details-accordion mt-4">
@@ -772,5 +769,7 @@ $rating = rand(4, 5);
             }
         });
     </script>
+    <!-- AJAX Cart Management -->
+<script src="js/cart_ajax.js"></script>
 </body>
 </html>

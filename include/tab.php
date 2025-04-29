@@ -8,7 +8,7 @@
          
           Rent books
       </a>
-      <a href="grocery.php">
+      <a href="explore.php">
           
           Explore
       </a>

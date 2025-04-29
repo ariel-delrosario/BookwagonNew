@@ -1,3 +1,6 @@
+
+
+
 <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container">
         <a class="navbar-brand" href="dashboard.php">
@@ -6,7 +9,15 @@
         
         <div class="d-flex align-items-center">
             <a href="seller_request.php" class="nav-link me-4">Start selling</a>
-            <a href="#" class="nav-link me-3"><i class="fa-regular fa-bell"></i></a>
+            <li class="nav-item" style="position: relative; list-style: none; margin-right: 1rem;">
+                <a class="nav-link d-flex align-items-center" href="cart.php" style="text-decoration: none; color: inherit;">
+                    <i class="fas fa-shopping-cart" style="font-size: 1.2rem;"></i>
+                    <span class="cart-count badge bg-danger" style="position: absolute; top: -8px; right: -10px; font-size: 0.75rem; padding: 2px 5px; border-radius: 50%;">0</span>
+                </a>
+            </li>
+            <a href="#" class="nav-link me-3" style="margin-left: 0.5rem;">
+                <i class="fa-regular fa-bell"></i>
+            </a>
             <a href="#" class="nav-link me-3"><i class="fa-regular fa-envelope"></i></a>
             
             <!-- Dropdown Menu -->
