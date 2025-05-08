@@ -82,11 +82,12 @@ $bookTypeResult = $conn->query($bookTypeQuery);
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="css/tab.css">
     <style>
-:root {
+        :root {
             --primary-color: #f8a100;
-            --secondary-color: #f8a100;
-            --background-light: #f8f9fc;
-            --text-dark: #2c3e50;
+            --secondary-color: #f8f9fa;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
         }
 
         body {
@@ -96,12 +97,14 @@ $bookTypeResult = $conn->query($bookTypeQuery);
         }
 
         .navbar {
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
             background-color: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
         .navbar-brand img {
-            height: 50px;
+            height: 60px;
         }
         
         .book-card {

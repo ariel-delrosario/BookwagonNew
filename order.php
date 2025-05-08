@@ -137,11 +137,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $currentPaymentStatus = $orderData['payment_status'];
             
             if (($paymentMethod == 'cod' || $paymentMethod == 'pickup') && $currentPaymentStatus != 'paid') {
-                // Update payment status to paid
-                $updateStmt = $conn->prepare("UPDATE orders SET payment_status = 'paid', payment_date = NOW() WHERE order_id = ?");
-                $updateStmt->bind_param("i", $orderId);
+                // Start transaction
+                $conn->begin_transaction();
                 
-                if ($updateStmt->execute()) {
+                try {
+                    // Update payment status to paid
+                    $updateStmt = $conn->prepare("UPDATE orders SET payment_status = 'paid', payment_date = NOW() WHERE order_id = ?");
+                    $updateStmt->bind_param("i", $orderId);
+                    $updateStmt->execute();
+                    
+                    // Update all items for this seller to shipped_pending_confirmation
+                    $updateItemsStmt = $conn->prepare("
+                        UPDATE order_items 
+                        SET status = 'shipped_pending_confirmation' 
+                        WHERE order_id = ? AND seller_id = ?
+                    ");
+                    $updateItemsStmt->bind_param("ii", $orderId, $userId);
+                    $updateItemsStmt->execute();
+                    
                     // Log the payment confirmation
                     $logStmt = $conn->prepare("
                         INSERT INTO payment_logs (order_id, user_id, action, status, details) 
@@ -151,9 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $logStmt->bind_param("iis", $orderId, $userId, $details);
                     $logStmt->execute();
                     
-                    $_SESSION['success_message'] = "Payment confirmed successfully.";
-                } else {
-                    $_SESSION['error_message'] = "Failed to confirm payment.";
+                    // Commit transaction
+                    $conn->commit();
+                    
+                    $_SESSION['success_message'] = "Payment confirmed successfully. Items are now pending customer confirmation.";
+                } catch (Exception $e) {
+                    // Rollback transaction on error
+                    $conn->rollback();
+                    $_SESSION['error_message'] = "Failed to confirm payment: " . $e->getMessage();
                 }
             } else {
                 if ($currentPaymentStatus == 'paid') {
@@ -288,28 +306,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($itemData['purchase_type'] == 'rent') {
             // Create a rental record
             $createRentalStmt = $conn->prepare("
-                INSERT INTO book_rentals (
-                    user_id, 
-                    book_id, 
-                    seller_id, 
-                    rental_date, 
-                    due_date, 
-                    rental_weeks, 
-                    status, 
-                    total_price,
-                    order_id
-                ) VALUES (
-                    (SELECT user_id FROM orders WHERE order_id = ?), 
-                    ?, 
-                    ?, 
-                    NOW(), 
-                    DATE_ADD(NOW(), INTERVAL ? WEEK), 
-                    ?, 
-                    'active', 
-                    ?, 
-                    ?
-                )
-            ");
+            INSERT INTO book_rentals (
+                user_id, 
+                book_id, 
+                seller_id, 
+                rental_date, 
+                due_date, 
+                rental_weeks, 
+                status, 
+                total_price,
+                order_id
+            ) VALUES (
+                (SELECT user_id FROM orders WHERE order_id = ?), 
+                ?, 
+                ?, 
+                NOW(), 
+                DATE_ADD(NOW(), INTERVAL ? WEEK), 
+                ?, 
+                'active', 
+                ?, 
+                ?
+            )
+        ");
             $createRentalStmt->bind_param(
                 "iiiiidi", 
                 $itemData['order_id'], 
@@ -401,7 +419,9 @@ $query = "
         b.title as book_title,
         b.author as book_author,
         b.ISBN,
-        b.cover_image
+        b.cover_image,
+        b.price as book_price,
+        b.rent_price as book_rent_price
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.order_id
     JOIN users u ON o.user_id = u.id
@@ -456,6 +476,32 @@ foreach ($orderItems as $item) {
     
     // Calculate item total
     $itemTotal = $item['unit_price'] * $itemQuantity;
+
+    // Determine purchase type if empty
+    $purchaseType = $item['purchase_type'];
+    if (empty($purchaseType)) {
+        // If rental_weeks > 0 and unit price approximately matches rent_price * rental_weeks, it's a rental
+        if ($item['rental_weeks'] > 0 && 
+            abs($item['unit_price'] - ($item['book_rent_price'] * $item['rental_weeks'])) < 5) {
+            $purchaseType = 'rent';
+        }
+        // If unit price is significantly less than book price, it's likely a rental
+        else if ($item['unit_price'] < ($item['book_price'] * 0.9)) {
+            $purchaseType = 'rent';
+        }
+        // If unit price is close to book price, it's a purchase
+        else if (abs($item['unit_price'] - $item['book_price']) < ($item['book_price'] * 0.1)) {
+            $purchaseType = 'buy';
+        }
+        // Default: if has rental weeks, assume rental
+        else if ($item['rental_weeks'] > 0) {
+            $purchaseType = 'rent';
+        }
+        // Otherwise, assume it's a buy
+        else {
+            $purchaseType = 'buy';
+        }
+    }
     
     // Add item details
     $orders[$orderId]['items'][] = [
@@ -466,9 +512,11 @@ foreach ($orderItems as $item) {
         'isbn' => $item['ISBN'],
         'cover_image' => $item['cover_image'],
         'quantity' => $itemQuantity,
-        'purchase_type' => $item['purchase_type'],
+        'purchase_type' => $purchaseType,
         'rental_weeks' => $item['rental_weeks'],
         'unit_price' => $item['unit_price'],
+        'book_price' => $item['book_price'],
+        'book_rent_price' => $item['book_rent_price'],
         'item_total' => $itemTotal,
         'status' => $item['item_status']
     ];

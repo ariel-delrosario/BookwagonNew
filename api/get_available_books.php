@@ -7,7 +7,7 @@ header('Content-Type: application/json');
 if (!isset($_SESSION['id'])) {
     echo json_encode([
         'success' => false,
-        'message' => 'You must be logged in to view your books'
+        'message' => 'You must be logged in to view available books'
     ]);
     exit;
 }
@@ -18,7 +18,7 @@ try {
     $query = "SELECT bs.*, u.firstname, u.lastname, u.profile_picture as user_avatar
               FROM book_swaps bs
               JOIN users u ON bs.user_id = u.id
-              WHERE bs.user_id = ?
+              WHERE bs.user_id != ? AND bs.status = 'available'
               ORDER BY bs.created_at DESC";
     
     $stmt = $conn->prepare($query);
@@ -48,7 +48,7 @@ try {
     error_log('Database error: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to load your books'
+        'message' => 'Failed to load available books'
     ]);
 }
 ?>

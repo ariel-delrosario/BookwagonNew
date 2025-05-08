@@ -276,7 +276,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'confirm_receipt' && isset($_GE
 
     $typeStmt = $conn->prepare("
         SELECT oi.item_id, oi.purchase_type, oi.rental_weeks, oi.book_id, oi.order_id, oi.seller_id, oi.unit_price,
-               b.rent_price, b.price 
+               b.rent_price, b.price
         FROM order_items oi 
         JOIN books b ON oi.book_id = b.book_id 
         WHERE oi.item_id = ?
@@ -293,6 +293,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'confirm_receipt' && isset($_GE
     }
 
     error_log("Item #" . $orderItemId . " purchase_type: '" . $itemType['purchase_type'] . "'");
+    error_log("Item #" . $orderItemId . " rental_weeks: " . $itemType['rental_weeks']);
 
     // Update status to 'delivered'
     $updateStmt = $conn->prepare("UPDATE order_items SET status = 'delivered' WHERE item_id = ?");
@@ -345,15 +346,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'confirm_receipt' && isset($_GE
             );
 
             if ($rentalStmt->execute()) {
-                $_SESSION['success_message'] = "Your rental has started! Due on " . date('F j, Y', strtotime($dueDate));
+                $rentalId = $conn->insert_id;
+                $_SESSION['success_message'] = "Your rental has started! You can now track your rental duration in the Rentals tab. Due date: " . date('F j, Y', strtotime($dueDate));
             } else {
                 $_SESSION['error_message'] = "Failed to create rental: " . $rentalStmt->error;
             }
         } else {
-            $_SESSION['success_message'] = "This rental is already active.";
+            $rentalId = $existingRental->fetch_assoc()['rental_id'];
+            $_SESSION['success_message'] = "This rental is already active. You can track its duration in the Rentals tab.";
         }
 
-        header("Location: rented_books.php?tab=rentals");
+        header("Location: rented_books.php?tab=rentals&highlight_rental=" . ($rentalId ?? 0));
         exit();
     } else {
         // This is a purchase, not a rental
@@ -377,7 +380,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'confirm_receipt' && isset($_GE
 $ordersQuery = "
     SELECT o.order_id, o.order_date, o.payment_method, o.payment_status, o.order_status,
            oi.item_id, oi.book_id, oi.purchase_type, oi.rental_weeks, oi.status as item_status, oi.unit_price,
-           b.title, b.author, b.cover_image, b.description, 
+           b.title, b.author, b.cover_image, b.description, b.price, b.rent_price,
            s.firstname as seller_firstname, s.lastname as seller_lastname, s.username as seller_username
     FROM orders o
     JOIN order_items oi ON o.order_id = oi.order_id
@@ -431,12 +434,39 @@ foreach ($orders as $order) {
     // Initialize variables for better type detection
     $isRental = false;
     
-    // PRIORITIZE the purchase_type field
-    // Only check if explicitly marked as rent
+    // Determine purchase type if empty
+    $purchaseType = $order['purchase_type'];
+    if (empty($purchaseType)) {
+        // If rental_weeks > 0 and unit price approximately matches rent_price * rental_weeks, it's a rental
+        if ($order['rental_weeks'] > 0 && 
+            abs($order['unit_price'] - ($order['rent_price'] * $order['rental_weeks'])) < 5) {
+            $purchaseType = 'rent';
+        }
+        // If unit price is significantly less than book price, it's likely a rental
+        else if ($order['unit_price'] < ($order['price'] * 0.9)) {
+            $purchaseType = 'rent';
+        }
+        // If unit price is close to book price, it's a purchase
+        else if (abs($order['unit_price'] - $order['price']) < ($order['price'] * 0.1)) {
+            $purchaseType = 'buy';
+        }
+        // Default: if has rental weeks, assume rental
+        else if ($order['rental_weeks'] > 0) {
+            $purchaseType = 'rent';
+        }
+        // Otherwise, assume it's a buy
+        else {
+            $purchaseType = 'buy';
+        }
+        
+        // Update the order array with the determined purchase type
+        $order['purchase_type'] = $purchaseType;
+    }
+    
+    // Check if this is a rental based on purchase_type
     if ($order['purchase_type'] == 'rent') {
         $isRental = true;
     }
-    // Don't use rental_weeks to determine type - it can be inconsistent
     
     // Now determine which category this order belongs to
     if ($order['payment_method'] == 'bank_transfer' && $order['payment_status'] == 'awaiting_payment') {
@@ -454,12 +484,21 @@ foreach ($orders as $order) {
             // This is a rental item that's been delivered
             // Check if it already has an active rental record
             $checkRentalStmt = $conn->prepare(
-                "SELECT rental_id FROM book_rentals 
-                 WHERE order_id = ? AND book_id = ? AND user_id = ? AND status = 'active'"
+                "SELECT rental_id, status FROM book_rentals 
+                 WHERE order_id = ? AND book_id = ? AND user_id = ?"
             );
             $checkRentalStmt->bind_param("iii", $order['order_id'], $order['book_id'], $userId);
             $checkRentalStmt->execute();
             $rentalResult = $checkRentalStmt->get_result();
+            
+            if ($rentalResult->num_rows > 0) {
+                $rentalRecord = $rentalResult->fetch_assoc();
+                // Skip if the rental has a pending return request
+                if ($rentalRecord['status'] === 'return_pending' || $rentalRecord['status'] === 'returned') {
+                    // Don't add to any active tab - it should only appear in history
+                    continue;
+                }
+            }
             
             // If no active rental exists, add to To Receive for confirmation
             if ($rentalResult->num_rows == 0) {
@@ -488,6 +527,7 @@ $activeRentalsCount = count($activeRentals);
 
 // Determine which tab to show based on URL parameter or default to 'all'
 $activeTab = $_GET['tab'] ?? 'all';
+$highlightRentalId = isset($_GET['highlight_rental']) ? intval($_GET['highlight_rental']) : 0;
 ?>
 
 <!DOCTYPE html>
@@ -747,7 +787,19 @@ $activeTab = $_GET['tab'] ?? 'all';
         .seller-info {
             font-size: 0.85rem;
             color: var(--text-muted);
-            margin-top: 10px;
+        }
+        
+        .highlighted-rental {
+            background-color: #fffaeb;
+            border: 2px solid #f8a100;
+            box-shadow: 0 0 15px rgba(248, 161, 0, 0.2);
+            animation: highlight-pulse 2s ease-in-out 3;
+        }
+        
+        @keyframes highlight-pulse {
+            0% { box-shadow: 0 0 15px rgba(248, 161, 0, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(248, 161, 0, 0.5); }
+            100% { box-shadow: 0 0 15px rgba(248, 161, 0, 0.2); }
         }
         
         /* Sidebar and rental styles from the original file */
@@ -998,7 +1050,7 @@ $activeTab = $_GET['tab'] ?? 'all';
                             </div>
                             
                             <div class="order-actions">
-                                <?php if (in_array($order, $toReceive)): ?>
+                                <?php if ($order['item_status'] == 'shipped_pending_confirmation'): ?>
                                 <a href="rented_books.php?action=confirm_receipt&rental_id=<?php echo $order['order_id']; ?>&order_item_id=<?php echo $order['item_id']; ?>" class="order-action-btn btn-confirm-receipt">
                                     Confirm Receipt
                                 </a>
@@ -1014,8 +1066,10 @@ $activeTab = $_GET['tab'] ?? 'all';
                 
                 <?php elseif ($activeTab == 'rentals' && !empty($activeRentals)): ?>
                     <!-- Display active rentals -->
-                    <?php foreach ($activeRentals as $rental): ?>
-                    <div class="order-card">
+                    <?php foreach ($activeRentals as $rental): 
+                        $highlightClass = ($highlightRentalId > 0 && $rental['rental_id'] == $highlightRentalId) ? 'highlighted-rental' : '';
+                    ?>
+                    <div class="order-card <?php echo $highlightClass; ?>">
                         <div class="order-header">
                             <div>
                             <div class="order-date">Rental started: <?php echo date('F j, Y', strtotime($rental['rental_date'])); ?></div>
@@ -1083,12 +1137,15 @@ $activeTab = $_GET['tab'] ?? 'all';
                             
                             <div class="order-actions">
                             <a href="#" class="order-action-btn btn-confirm-receipt btn-return-book"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#returnBookModal"
                             data-rental-id="<?php echo $rental['rental_id']; ?>"
                             data-book-title="<?php echo htmlspecialchars($rental['title']); ?>"
                             data-book-author="<?php echo htmlspecialchars($rental['author']); ?>"
                             data-book-image="<?php echo $rental['cover_image']; ?>"
                             data-due-date="<?php echo date('F j, Y', strtotime($rental['due_date'])); ?>"
-                            data-is-overdue="<?php echo (strtotime($rental['due_date']) < time()) ? 'true' : 'false'; ?>">
+                            data-is-overdue="<?php echo (strtotime($rental['due_date']) < time()) ? 'true' : 'false'; ?>"
+                            data-seller-id="<?php echo $rental['seller_id']; ?>">
                                 Return Book
                             </a>
                             <a href="rented_books.php?action=extend&rental_id=<?php echo $rental['rental_id']; ?>" class="order-action-btn btn-view-details">
@@ -1158,66 +1215,11 @@ $activeTab = $_GET['tab'] ?? 'all';
                             </label>
                         </div>
                         
-                        <!-- Drop-off Locations (visible when drop-off is selected) -->
+                        <!-- Drop-off Locations -->
                         <div id="dropoff_locations" class="mb-4">
                             <h6 class="mt-4 mb-3">Select Drop-off Location</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="dropoff_location" id="location1" value="main_office" checked>
-                                                <label class="form-check-label" for="location1">
-                                                    <strong>Main Office</strong><br>
-                                                    123 Book Street, Manila<br>
-                                                    Mon-Fri: 9AM-6PM, Sat: 10AM-2PM
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="dropoff_location" id="location2" value="downtown_branch">
-                                                <label class="form-check-label" for="location2">
-                                                    <strong>Downtown Branch</strong><br>
-                                                    456 Reading Ave, Quezon City<br>
-                                                    Mon-Sun: 10AM-7PM
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="dropoff_location" id="location3" value="mall_kiosk">
-                                                <label class="form-check-label" for="location3">
-                                                    <strong>Mall Kiosk</strong><br>
-                                                    SM Megamall, Level 3, Bldg A<br>
-                                                    Mall Hours: 10AM-9PM
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="dropoff_location" id="location4" value="university_hub">
-                                                <label class="form-check-label" for="location4">
-                                                    <strong>University Hub</strong><br>
-                                                    Near UP Diliman Campus Gate<br>
-                                                    Mon-Sat: 8AM-8PM
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="row" id="dropoff_locations_container">
+                                <!-- Dropoff locations will be loaded here -->
                             </div>
                         </div>
                         
@@ -1333,79 +1335,172 @@ $activeTab = $_GET['tab'] ?? 'all';
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Get all Return Book buttons
-    const returnButtons = document.querySelectorAll('.btn-return-book');
-    
-    // Add event listeners to Return Book buttons
-    returnButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Get data from button attributes
-            const rentalId = this.getAttribute('data-rental-id');
-            const bookTitle = this.getAttribute('data-book-title');
-            const bookAuthor = this.getAttribute('data-book-author');
-            const bookImage = this.getAttribute('data-book-image');
-            const dueDate = this.getAttribute('data-due-date');
-            const isOverdue = this.getAttribute('data-is-overdue') === 'true';
-            
-            // Set values in the modal
-            document.getElementById('return_rental_id').value = rentalId;
-            document.getElementById('return_book_title').innerText = bookTitle;
-            document.getElementById('return_book_author').innerText = bookAuthor;
-            document.getElementById('return_book_image').src = bookImage;
-            document.getElementById('return_due_date').innerText = dueDate;
-            
-            // Show overdue notice if applicable
-            const overdueNotice = document.getElementById('overdue_notice');
-            if (isOverdue) {
-                overdueNotice.classList.remove('d-none');
-            } else {
-                overdueNotice.classList.add('d-none');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Scroll to highlighted rental if present
+            const highlightedRental = document.querySelector('.highlighted-rental');
+            if (highlightedRental) {
+                setTimeout(() => {
+                    highlightedRental.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
             }
             
-            // Set minimum date for pickup to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('pickup_date').min = tomorrow.toISOString().split('T')[0];
-            
-            // Show the modal
-            const returnBookModal = new bootstrap.Modal(document.getElementById('returnBookModal'));
-            returnBookModal.show();
-        });
-    });
-    
-    // Toggle between Drop-off and Pickup sections
-    const returnMethodRadios = document.querySelectorAll('input[name="return_method"]');
-    const dropoffLocations = document.getElementById('dropoff_locations');
-    const pickupSchedule = document.getElementById('pickup_schedule');
-    const pickupFields = pickupSchedule.querySelectorAll('input, select, textarea');
-    
-    returnMethodRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'dropoff') {
-                dropoffLocations.classList.remove('d-none');
-                pickupSchedule.classList.add('d-none');
-                
-                // Disable pickup fields to prevent form submission
-                pickupFields.forEach(field => {
-                    field.disabled = true;
-                    field.required = false;
+            // Add event handler for purchase type radio buttons to ensure they're properly saved
+            const purchaseTypeRadios = document.querySelectorAll('input[name="purchase_type"]');
+            if (purchaseTypeRadios.length > 0) {
+                purchaseTypeRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        // When purchase type is changed, submit the form immediately
+                        if (this.closest('form')) {
+                            this.closest('form').submit();
+                        }
+                    });
                 });
-            } else {
-                dropoffLocations.classList.add('d-none');
-                pickupSchedule.classList.remove('d-none');
+            }
+            
+            // Helper to render default drop-off locations
+            function renderDefaultDropoffLocations(container, sellerData) {
+                let html = '';
+                if (sellerData && sellerData.success && sellerData.address) {
+                    // Compose the full address string
+                    const sellerFullAddress = `${sellerData.address.name}, ${sellerData.address.address}, ${sellerData.address.city} ${sellerData.address.postal_code}`;
+                    html += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="dropoff_location" id="seller_location" value="${sellerFullAddress.replace(/"/g, '&quot;')}" checked>
+                                        <label class="form-check-label" for="seller_location">
+                                            <strong>Seller's Location</strong><br>
+                                            ${sellerData.address.name}<br>
+                                            ${sellerData.address.address}<br>
+                                            ${sellerData.address.city} ${sellerData.address.postal_code}<br>
+                                            Contact: ${sellerData.address.contact_person}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="dropoff_location" id="location1" value="Main Office, 123 Book Street, Manila" ${(!sellerData || !sellerData.success) ? 'checked' : ''}>
+                                    <label class="form-check-label" for="location1">
+                                        <strong>Main Office</strong><br>
+                                        123 Book Street, Manila<br>
+                                        Mon-Fri: 9AM-6PM, Sat: 10AM-2PM
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="dropoff_location" id="location2" value="Downtown Branch, 456 Reading Ave, Quezon City">
+                                    <label class="form-check-label" for="location2">
+                                        <strong>Downtown Branch</strong><br>
+                                        456 Reading Ave, Quezon City<br>
+                                        Mon-Sun: 10AM-7PM
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML = html;
+            }
+
+            // Get all Return Book buttons
+            const returnButtons = document.querySelectorAll('.btn-return-book');
+            
+            // Add event listeners to Return Book buttons
+            returnButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Get data from button attributes
+                    const rentalId = this.getAttribute('data-rental-id');
+                    const bookTitle = this.getAttribute('data-book-title');
+                    const bookAuthor = this.getAttribute('data-book-author');
+                    const bookImage = this.getAttribute('data-book-image');
+                    const dueDate = this.getAttribute('data-due-date');
+                    const isOverdue = this.getAttribute('data-is-overdue') === 'true';
+                    const sellerId = this.getAttribute('data-seller-id');
+                    
+                    // Set values in the modal
+                    document.getElementById('return_rental_id').value = rentalId;
+                    document.getElementById('return_book_title').innerText = bookTitle;
+                    document.getElementById('return_book_author').innerText = bookAuthor;
+                    document.getElementById('return_book_image').src = bookImage;
+                    document.getElementById('return_due_date').innerText = dueDate;
+                    
+                    // Show overdue notice if applicable
+                    const overdueNotice = document.getElementById('overdue_notice');
+                    if (isOverdue) {
+                        overdueNotice.classList.remove('d-none');
+                    } else {
+                        overdueNotice.classList.add('d-none');
+                    }
+                    
+                    // Fetch seller's address and update dropoff locations
+                    const container = document.getElementById('dropoff_locations_container');
+                    container.innerHTML = '<div class="text-center text-muted">Loading drop-off locations...</div>';
+
+                    fetch(`get_seller_address.php?seller_id=${sellerId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            renderDefaultDropoffLocations(container, data);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching seller address:', error);
+                            renderDefaultDropoffLocations(container, null);
+                        });
+                });
+            });
+            
+            // Toggle between Drop-off and Pickup sections
+            const returnMethodRadios = document.querySelectorAll('input[name="return_method"]');
+            const dropoffLocations = document.getElementById('dropoff_locations');
+            const pickupSchedule = document.getElementById('pickup_schedule');
+            const pickupFields = pickupSchedule.querySelectorAll('input, select, textarea');
                 
-                // Enable pickup fields
-                pickupFields.forEach(field => {
-                    field.disabled = false;
-                    if (field.id !== 'pickup_notes') { // Notes are optional
-                        field.required = true;
+            returnMethodRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'dropoff') {
+                        dropoffLocations.classList.remove('d-none');
+                        pickupSchedule.classList.add('d-none');
+                        
+                        // Disable pickup fields to prevent form submission
+                        pickupFields.forEach(field => {
+                            field.disabled = true;
+                            field.required = false;
+                        });
+                    } else {
+                        dropoffLocations.classList.add('d-none');
+                        pickupSchedule.classList.remove('d-none');
+                        
+                        // Enable pickup fields
+                        pickupFields.forEach(field => {
+                            field.disabled = false;
+                            if (field.id !== 'pickup_notes') { // Notes are optional
+                                field.required = true;
+                            }
+                        });
                     }
                 });
+            });
+            
+            // Set minimum date for pickup
+            const pickupDateField = document.getElementById('pickup_date');
+            if (pickupDateField) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                pickupDateField.min = tomorrow.toISOString().split('T')[0];
             }
         });
-    });
-});
-</script>
+    </script>
 </body>
 </html>

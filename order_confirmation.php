@@ -461,12 +461,17 @@ switch($order['payment_method']) {
         </div>
         <?php endif; ?>
         
-        <?php if (isset($_SESSION['payment_success'])): ?>
+        <?php if (isset($_SESSION['payment_success']) || isset($_SESSION['order_completed'])): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Your order has been placed successfully!
+            <?php if (isset($_SESSION['order_completed'])): ?>
+                <strong>Order Completed!</strong> Your order has been processed successfully.
+                <?php unset($_SESSION['order_completed']); ?>
+            <?php else: ?>
+                Your order has been placed successfully!
+                <?php unset($_SESSION['payment_success']); ?>
+            <?php endif; ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <?php unset($_SESSION['payment_success']); ?>
         <?php endif; ?>
         
         <div class="confirmation-header">
@@ -530,6 +535,12 @@ switch($order['payment_method']) {
                 
                 <div class="order-items">
                     <?php foreach ($orderItems as $item): ?>
+                        <?php 
+                        // Set default purchase type based on price comparison if empty
+                        if (empty($item['purchase_type'])) {
+                            $item['purchase_type'] = ($item['item_unit_price'] < $item['price']) ? 'rent' : 'buy';
+                        }
+                        ?>
                         <div class="order-item">
                     <img src="<?php echo $item['cover_image']; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" class="order-item-image">
                     

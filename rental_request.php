@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     completed_date = NOW()
                 WHERE return_id = ? AND seller_id = ?
             ");
-            $updateReturnStmt->bind_param("ssdddsi", 
+            $updateReturnStmt->bind_param("ssdddsii", 
                 $bookCondition, 
                 $damageDescription, 
                 $damageFee,

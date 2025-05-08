@@ -12,45 +12,40 @@ if (!isset($_SESSION['id'])) {
     header("Location: login.php");
     exit();
 }
+
 // At the beginning of checkout.php, add this check
-if (!isset($_SESSION['cart_details']) || empty($_SESSION['cart_details'])) {
-    // Recalculate totals from cart items
-    $cartQuery = "SELECT 
-        SUM(CASE 
-            WHEN c.purchase_type = 'rent' 
-            THEN b.rent_price * c.rental_weeks * c.quantity 
-            ELSE b.price * c.quantity 
-        END) as total_amount,
-        COUNT(*) as item_count
-    FROM cart c
-    JOIN books b ON c.book_id = b.book_id
-    WHERE c.user_id = ?";
-    $cartTotalStmt = $conn->prepare($cartQuery);
-    $cartTotalStmt->bind_param("i", $userId);
-    $cartTotalStmt->execute();
-    $cartTotalResult = $cartTotalStmt->get_result();
-    $cartTotalData = $cartTotalResult->fetch_assoc();
-    
-    $subtotal = $cartTotalData['total_amount'] ?? 0;
-    $itemCount = $cartTotalData['item_count'] ?? 0;
-    $tax = $subtotal * 0.10;
-    $shipping = $subtotal < 50 ? 60 : 0;
-    $total = $subtotal + $tax + $shipping;
-    $freeShippingThreshold = 50;
-    $amountForFreeShipping = max(0, $freeShippingThreshold - $subtotal);
-    
-    // Create cart_details if it doesn't exist
-    $_SESSION['cart_details'] = [
-        'subtotal' => $subtotal,
-        'tax' => $tax,
-        'shipping' => $shipping,
-        'discount' => 0,
-        'total' => $total,
-        'itemCount' => $itemCount,
-        'freeShippingThreshold' => $freeShippingThreshold,
-        'amountForFreeShipping' => $amountForFreeShipping
-    ];
-}
+// Always recalculate cart totals from the database to ensure they're current
+$cartQuery = "SELECT 
+    SUM(CASE 
+        WHEN c.purchase_type = 'rent' 
+        THEN b.rent_price * c.rental_weeks * c.quantity 
+        ELSE b.price * c.quantity 
+    END) as total_amount,
+    COUNT(*) as item_count
+FROM cart c
+JOIN books b ON c.book_id = b.book_id
+WHERE c.user_id = ?";
+$cartTotalStmt = $conn->prepare($cartQuery);
+$cartTotalStmt->bind_param("i", $userId);
+$cartTotalStmt->execute();
+$cartTotalResult = $cartTotalStmt->get_result();
+$cartTotalData = $cartTotalResult->fetch_assoc();
+
+$subtotal = $cartTotalData['total_amount'] ?? 0;
+$itemCount = $cartTotalData['item_count'] ?? 0;
+$discount = 0;
+
+// No tax, and no shipping fee yet - will be added based on payment method
+$total = $subtotal - $discount;
+
+// Update cart_details in session with fresh data
+$_SESSION['cart_details'] = [
+    'subtotal' => $subtotal,
+    'shipping' => 0, // Will be calculated based on payment method
+    'discount' => $discount,
+    'total' => $total,
+    'itemCount' => $itemCount
+];
 
 // Process checkout form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -63,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $city = mysqli_real_escape_string($conn, $_POST['city']);
     $postalCode = mysqli_real_escape_string($conn, $_POST['postal_code']);
     $notes = mysqli_real_escape_string($conn, $_POST['notes'] ?? '');
+    $paymentMethod = mysqli_real_escape_string($conn, $_POST['payment_method'] ?? 'cod');
     
     // Validation - simple check that required fields are filled
     if (empty($firstName) || empty($lastName) || empty($email) || empty($phone) || empty($address) || empty($city) || empty($postalCode)) {
@@ -85,34 +81,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         FROM cart c
         JOIN books b ON c.book_id = b.book_id
         WHERE c.user_id = ?";
-    $cartTotalStmt = $conn->prepare($cartTotalQuery);
-    $cartTotalStmt->bind_param("i", $userId);
-    $cartTotalStmt->execute();
-    $cartTotalResult = $cartTotalStmt->get_result();
-    $cartTotalData = $cartTotalResult->fetch_assoc();
-    $totalAmount = $cartTotalData['total_amount'] ?? 0;
+        $cartTotalStmt = $conn->prepare($cartTotalQuery);
+        $cartTotalStmt->bind_param("i", $userId);
+        $cartTotalStmt->execute();
+        $cartTotalResult = $cartTotalStmt->get_result();
+        $cartTotalData = $cartTotalResult->fetch_assoc();
+        $subtotal = $cartTotalData['total_amount'] ?? 0;
+        
+        // Add shipping fee only for Cash on Delivery
+        $shippingFee = ($paymentMethod === 'cod') ? 60 : 0;
+        $totalAmount = $subtotal + $shippingFee;
     
-    // Debugging
-    error_log("Total Amount: " . $totalAmount);
+        // Debugging
+        error_log("Payment Method: " . $paymentMethod);
+        error_log("Subtotal: " . $subtotal);
+        error_log("Shipping Fee: " . $shippingFee);
+        error_log("Total Amount: " . $totalAmount);
         
         if ($totalAmount <= 0) {
             throw new Exception("Your cart appears to be empty or has invalid items.");
         }
 
         // 2. Create new order with the correct total amount
-        $orderStmt = $conn->prepare("INSERT INTO orders (user_id, first_name, last_name, email, phone, address, city, postal_code, notes, order_date, total_amount) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)");
-            $orderStmt->bind_param("issssssssd", $userId, $firstName, $lastName, $email, $phone, $address, $city, $postalCode, $notes, $totalAmount);
+        $orderStmt = $conn->prepare("INSERT INTO orders (user_id, first_name, last_name, email, phone, address, city, postal_code, notes, payment_method, shipping_fee, order_date, total_amount) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)");
+            $orderStmt->bind_param("isssssssssid", $userId, $firstName, $lastName, $email, $phone, $address, $city, $postalCode, $notes, $paymentMethod, $shippingFee, $totalAmount);
             $orderStmt->execute();
             $orderId = $conn->insert_id;
         
         // 3. Get cart items
-// In checkout.php, modify the cart retrieval query:
-                    $cartStmt = $conn->prepare("SELECT c.*, b.user_id as seller_id, b.price, b.rent_price, 
-                    c.rental_weeks as rental_weeks, c.purchase_type as purchase_type 
-                    FROM cart c 
-                    JOIN books b ON c.book_id = b.book_id 
-                    WHERE c.user_id = ?");
+        $cartStmt = $conn->prepare("SELECT c.*, b.user_id as seller_id, b.price, b.rent_price, 
+                         c.rental_weeks as rental_weeks, c.purchase_type as purchase_type 
+                         FROM cart c 
+                         JOIN books b ON c.book_id = b.book_id 
+                         WHERE c.user_id = ?");
         $cartStmt->bind_param("i", $userId);
         $cartStmt->execute();
         $cartResult = $cartStmt->get_result();
@@ -124,34 +126,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // 4. Add items to order_items table
         $itemStmt = $conn->prepare("INSERT INTO order_items (order_id, book_id, seller_id, quantity, purchase_type, rental_weeks, unit_price) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)");
+                         VALUES (?, ?, ?, ?, ?, ?, ?)");
         
         while ($cartItem = $cartResult->fetch_assoc()) {
             $bookId = $cartItem['book_id'];
             $sellerId = $cartItem['seller_id'];
             $quantity = $cartItem['quantity'];
+            $purchaseType = $cartItem['purchase_type'];
+            $rentalWeeks = $cartItem['rental_weeks'] ?? 1;
             
-            // Fetch book details to compare prices
+            // Fetch book details to get accurate pricing
             $bookStmt = $conn->prepare("SELECT price, rent_price FROM books WHERE book_id = ?");
             $bookStmt->bind_param("i", $bookId);
             $bookStmt->execute();
             $bookResult = $bookStmt->get_result();
             $bookDetails = $bookResult->fetch_assoc();
             
-            // Determine purchase type based on unit price
-            if ($cartItem['purchase_type'] == 'rent') {
-                $unitPrice = $cartItem['rent_price'] * ($cartItem['rental_weeks'] ?? 1);
-                $purchaseType = 'rent';
-                $rentalWeeks = $cartItem['rental_weeks'] ?? 1;
+            // Make sure purchase_type is never empty
+            if (empty($purchaseType)) {
+                // Determine purchase type based on price and rental weeks
+                if ($rentalWeeks > 0) {
+                    $purchaseType = 'rent';
+                    $unitPrice = $bookDetails['rent_price'] * $rentalWeeks;
+                } else {
+                    // Compare unit price with book price to determine if it's a rental or purchase
+                    $unitPrice = $cartItem['unit_price'] ?? 0;
+                    if ($unitPrice > 0 && $unitPrice < $bookDetails['price'] * 0.9) {
+                        $purchaseType = 'rent';
+                    } else {
+                        $purchaseType = 'buy';
+                        $unitPrice = $bookDetails['price'];
+                        $rentalWeeks = NULL;
+                    }
+                }
             } else {
-                // If unit price matches book's price, it's a buy
-                $unitPrice = $cartItem['price'];
-                $purchaseType = ($unitPrice == $bookDetails['price']) ? 'buy' : 'rent';
-                $rentalWeeks = 1;
+                // Calculate unit price based on purchase type
+                if ($purchaseType == 'rent') {
+                    $unitPrice = $bookDetails['rent_price'] * $rentalWeeks;
+                } else {
+                    $unitPrice = $bookDetails['price'];
+                    // For buy items, set rental_weeks to NULL
+                    $rentalWeeks = NULL;
+                }
             }
             
             // Detailed error logging
-            error_log("Checkout Order Item - Book ID: $bookId, Purchase Type: $purchaseType, Unit Price: $unitPrice, Book Price: {$bookDetails['price']}, Book Rent Price: {$bookDetails['rent_price']}");
+            error_log("Checkout Order Item - Book ID: $bookId, Purchase Type: $purchaseType, Rental Weeks: " . ($rentalWeeks ?? 'NULL') . ", Unit Price: $unitPrice");
             
             $itemStmt->bind_param("iiisiid", $orderId, $bookId, $sellerId, $quantity, $purchaseType, $rentalWeeks, $unitPrice);
             
@@ -209,12 +229,8 @@ $userResult = $userStmt->get_result();
 $userData = $userResult->fetch_assoc();
 
 $subtotal = $_SESSION['cart_details']['subtotal'] ?? 0;
-$tax = $_SESSION['cart_details']['tax'] ?? 0;
-$shipping = $_SESSION['cart_details']['shipping'] ?? 0;
-$total = $_SESSION['cart_details']['total'] ?? 0;
 $discount = $_SESSION['cart_details']['discount'] ?? 0;
-$freeShippingThreshold = $_SESSION['cart_details']['freeShippingThreshold'] ?? 50;
-$amountForFreeShipping = $_SESSION['cart_details']['amountForFreeShipping'] ?? 0;
+$total = $_SESSION['cart_details']['total'] ?? 0;
 
 // Get cart total
 if ($subtotal <= 0) {
@@ -235,14 +251,9 @@ if ($subtotal <= 0) {
     $cartTotalData = $cartTotalResult->fetch_assoc();
     
     $subtotal = $cartTotalData['total_amount'] ?? 0;
-    $tax = $subtotal * 0.10;
-    $shipping = $subtotal < 50 ? 60 : 0;
-    $total = $subtotal + $tax + $shipping;
+    $discount = 0;
+    $total = $subtotal - $discount;
 }
-
-// Calculate amount needed for free shipping
-$freeShippingThreshold = 50;
-$amountForFreeShipping = max(0, $freeShippingThreshold - $subtotal);
 
 unset($_SESSION['cart_subtotal']);
 unset($_SESSION['cart_tax']);
@@ -250,8 +261,7 @@ unset($_SESSION['cart_shipping']);
 unset($_SESSION['cart_total']);
 
 error_log("Subtotal: $subtotal");
-error_log("Tax: $tax");
-error_log("Shipping: $shipping");
+error_log("Discount: $discount");
 error_log("Total: $total");
 
 // Redirect to cart if empty
@@ -274,6 +284,9 @@ if ($cartCount == 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Checkout - BookWagon</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -514,6 +527,37 @@ if ($cartCount == 0) {
                         </div>
                         
                         <div class="checkout-section">
+                            <h4 class="mb-4">Payment Method</h4>
+                            
+                            <div class="mb-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input payment-method" type="radio" name="payment_method" id="payment_cod" value="cod" checked>
+                                    <label class="form-check-label d-flex align-items-center" for="payment_cod">
+                                        <i class="fas fa-truck me-2 text-secondary"></i>
+                                        Cash on Delivery
+                                        <span class="badge bg-warning text-dark ms-2">+ ₱60 shipping fee</span>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input payment-method" type="radio" name="payment_method" id="payment_pickup" value="pickup">
+                                    <label class="form-check-label d-flex align-items-center" for="payment_pickup">
+                                        <i class="fas fa-store me-2 text-secondary"></i>
+                                        Pickup / Meet-up
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input payment-method" type="radio" name="payment_method" id="payment_bank" value="bank">
+                                    <label class="form-check-label d-flex align-items-center" for="payment_bank">
+                                        <i class="fas fa-university me-2 text-secondary"></i>
+                                        Bank Transfer
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="checkout-section">
                             <h4 class="mb-4">Additional Information</h4>
                             
                             <div class="mb-3">
@@ -543,32 +587,23 @@ if ($cartCount == 0) {
                     </div>
                     
                     <div class="summary-row">
-                        <span>Tax (10%)</span>
-                        <span>₱<?php echo number_format($_SESSION['cart_details']['tax'] ?? 0, 2); ?></span>
+                        <span>Discount</span>
+                        <span>₱<?php echo number_format($_SESSION['cart_details']['discount'] ?? 0, 2); ?></span>
+                    </div>
+                    
+                    <div class="summary-row shipping-row" style="display: flex;">
+                        <span>Shipping fee (COD)</span>
+                        <span>₱60.00</span>
                     </div>
                     
                     <div class="summary-row summary-total">
                         <span>Total</span>
-                        <span>₱<?php echo number_format($_SESSION['cart_details']['total'] ?? 0, 2); ?></span>
+                        <span id="final-total">₱<?php echo number_format(($_SESSION['cart_details']['total'] ?? 0) + 60, 2); ?></span>
                     </div>
                     <div class="mt-4">
-                        <h5>Payment Options:</h5>
-                        <div class="d-flex flex-wrap gap-2 mt-3">
-                            <div class="badge bg-light text-dark p-2">
-                                <i class="fas fa-money-bill-wave me-1"></i> Cash on Delivery
-                            </div>
-                            <div class="badge bg-light text-dark p-2">
-                                <i class="fas fa-store me-1"></i> Pickup / Meet-up
-                            </div>
-                            <div class="badge bg-light text-dark p-2">
-                                <i class="fas fa-university me-1"></i> Bank Transfer
-                            </div>
-                        </div>
-                        <div class="alert alert-info mt-3 mb-0">
-                            <small>
-                                <i class="fas fa-info-circle me-1"></i>
-                                You'll select your payment method in the next step.
-                            </small>
+                        <h5>Payment Method Selected:</h5>
+                        <div id="selected-payment-method" class="alert alert-info mt-2">
+                            <i class="fas fa-truck me-2"></i> Cash on Delivery
                         </div>
                     </div>
                 </div>
@@ -578,5 +613,54 @@ if ($cartCount == 0) {
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get elements
+            const paymentMethods = document.querySelectorAll('.payment-method');
+            const shippingRow = document.querySelector('.shipping-row');
+            const finalTotal = document.getElementById('final-total');
+            const selectedPaymentMethod = document.getElementById('selected-payment-method');
+            
+            // Base total without shipping
+            const baseTotal = <?php echo $_SESSION['cart_details']['total'] ?? 0; ?>;
+            
+            // Function to update totals based on payment method
+            function updateTotals() {
+                const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+                
+                let newTotal = baseTotal;
+                let methodDisplay = '';
+                
+                if (selectedMethod === 'cod') {
+                    shippingRow.style.display = 'flex';
+                    newTotal += 60; // Add shipping fee for COD
+                    methodDisplay = '<i class="fas fa-truck me-2"></i> Cash on Delivery';
+                } else {
+                    shippingRow.style.display = 'none';
+                    
+                    if (selectedMethod === 'pickup') {
+                        methodDisplay = '<i class="fas fa-store me-2"></i> Pickup / Meet-up';
+                    } else if (selectedMethod === 'bank') {
+                        methodDisplay = '<i class="fas fa-university me-2"></i> Bank Transfer';
+                    }
+                }
+                
+                // Update the total display
+                finalTotal.textContent = '₱' + newTotal.toFixed(2);
+                
+                // Update selected method display
+                selectedPaymentMethod.innerHTML = methodDisplay;
+            }
+            
+            // Add event listeners to payment method radios
+            paymentMethods.forEach(method => {
+                method.addEventListener('change', updateTotals);
+            });
+            
+            // Initialize totals on page load
+            updateTotals();
+        });
+    </script>
 </body>
 </html>

@@ -1,6 +1,17 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() == PHP_SESSION_NONE) {
     session_start();
+}
+
+// Debug information
+error_log("Session data: " . print_r($_SESSION, true));
+error_log("Session ID: " . session_id());
+
+// Check if user is logged in
+if (!isset($_SESSION['id'])) {
+    error_log("User not logged in");
+} else {
+    error_log("User logged in with ID: " . $_SESSION['id']);
 }
 
 // Check if user is logged in

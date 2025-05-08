@@ -2,20 +2,33 @@
 include("session.php");
 include("connect.php");
 
-
-$userType = $_SESSION['usertype'] ?? ''; // Change to lowercase 'usertype'
-$firstName = $_SESSION['firstname'] ?? ''; // Change to lowercase 'firstname'
-$lastName = $_SESSION['lastname'] ?? ''; // Change to lowercase 'lastname'
+$userType = $_SESSION['usertype'] ?? '';
+$firstName = $_SESSION['firstname'] ?? '';
+$lastName = $_SESSION['lastname'] ?? '';
 $email = $_SESSION['email'] ?? '';
 $phone = $_SESSION['phone'] ?? '';
 $photo = $_SESSION['profile_picture'] ?? '';
 
-
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
-?>
 
+// Fetch most popular books from database
+$popularBooksQuery = "SELECT * FROM books WHERE popularity = 'Most popular' ORDER BY created_at DESC LIMIT 5";
+$popularBooksResult = $conn->query($popularBooksQuery);
+
+// Fetch new releases
+$newReleasesQuery = "SELECT * FROM books WHERE popularity = 'New Releases' ORDER BY created_at DESC LIMIT 4";
+$newReleasesResult = $conn->query($newReleasesQuery);
+
+// Fetch all themes for category tabs
+$themesQuery = "SELECT DISTINCT theme FROM books WHERE theme IS NOT NULL AND theme != ''";
+$themesResult = $conn->query($themesQuery);
+$themes = [];
+while ($row = $themesResult->fetch_assoc()) {
+    $themes[] = $row['theme'];
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -39,56 +52,65 @@ if ($conn->connect_error) {
         body {
             font-family: 'Arial', sans-serif;
             color: var(--text-dark);
-            background-color: #fff;
+            background-color: #f8f9fa;
         }
+        
         .dropdown-item {
-    padding: 0.75rem 1.5rem;
-    transition: background-color 0.2s;
-}
-
-.dropdown-item:hover {
-    background-color: rgba(0,0,0,0.05);
-}
-
-.dropdown-item:active {
-    background-color: rgba(0,0,0,0.1);
-}
-
-/* Fix dropdown toggle arrow */
-.dropdown-toggle::after {
-    margin-left: 0.5em;
-}
+            padding: 0.75rem 1.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        
+        .dropdown-item:active {
+            background-color: rgba(0,0,0,0.1);
+        }
+        
+        .dropdown-toggle::after {
+            margin-left: 0.5em;
+        }
+        
         /* Header styles */
         .navbar {
             padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
         .navbar-brand img {
             height: 60px;
         }
         
- 
         /* Carousel styles */
         .carousel {
             margin: 20px 0;
             border-radius: 10px;
             overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         
         .carousel-item img {
             width: 100%;
-            max-height: 300px;
+            max-height: 400px;
             object-fit: cover;
         }
         
         .carousel-control-prev, .carousel-control-next {
             width: 5%;
             opacity: 0.8;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 50%;
+            height: 50px;
+            width: 50px;
+            top: 50%;
+            transform: translateY(-50%);
         }
         
         .carousel-indicators {
-            bottom: -30px;
+            bottom: 10px;
         }
         
         .carousel-indicators button {
@@ -109,34 +131,98 @@ if ($conn->connect_error) {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            margin-top: 30px;
+            margin-top: 40px;
         }
         
         .section-title {
-            font-weight: 600;
+            font-weight: 700;
             margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .section-title:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background-color: var(--primary-color);
+            border-radius: 3px;
         }
         
         .see-more {
             color: var(--primary-color);
             text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .see-more:hover {
+            color: #d18a00;
+            text-decoration: underline;
         }
         
         /* Book cards */
+        .books-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px; /* Negative margin to counteract padding */
+        }
+        
+        .book-col {
+            padding: 10px; /* Spacing between books */
+        }
+        
         .book-card {
-            margin-bottom: 30px;
-            transition: transform 0.3s;
+            margin-bottom: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            height: 100%;
         }
         
         .book-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .book-img-container {
+            height: 250px;
+            overflow: hidden;
+            position: relative;
         }
         
         .book-img {
-            height: 200px;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.5s;
+        }
+        
+        .book-card:hover .book-img {
+            transform: scale(1.05);
+        }
+        
+        .book-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .book-details {
+            padding: 15px;
         }
         
         .book-author {
@@ -147,18 +233,20 @@ if ($conn->connect_error) {
         
         .book-title {
             font-weight: 600;
-            font-size: 0.95rem;
-            margin-top: 10px;
+            font-size: 1rem;
             margin-bottom: 5px;
-            white-space: nowrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
-            text-overflow: ellipsis;
+            min-height: 40px;
         }
         
         .book-price {
             display: flex;
             justify-content: space-between;
-            margin-top: 5px;
+            margin-top: 10px;
+            align-items: center;
         }
         
         .price-week {
@@ -167,37 +255,101 @@ if ($conn->connect_error) {
         }
         
         .price-value {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--primary-color);
+            font-size: 1.1rem;
         }
         
-        /* Category tabs */
-        .category-tabs {
+        .book-actions {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
+            justify-content: space-between;
+            margin-top: 10px;
         }
         
-        .category-tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
+        .btn-rent {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
             transition: all 0.3s;
         }
         
-        .category-tab.active {
+        .btn-rent:hover {
+            background-color: #e69500;
+            color: white;
+        }
+        
+        .btn-buy {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-buy:hover {
+            background-color: #218838;
+            color: white;
+        }
+        
+        /* Theme tabs */
+        .theme-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        
+        .theme-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            color: var(--text-muted);
+            margin-right: 5px;
+        }
+        
+        .theme-tab:hover {
             color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .theme-tab.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background-color: rgba(248, 161, 0, 0.05);
         }
         
         /* Libraries section */
         .libraries-section {
             margin-top: 40px;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         
         .search-bar {
             margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-bar .form-control {
+            padding-left: 40px;
+            border-radius: 25px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .search-bar i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
         }
         
         .library-card {
@@ -206,6 +358,13 @@ if ($conn->connect_error) {
             padding: 15px;
             margin-bottom: 15px;
             display: flex;
+            transition: all 0.3s;
+            background-color: white;
+        }
+        
+        .library-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
         }
         
         .library-img {
@@ -284,6 +443,12 @@ if ($conn->connect_error) {
             color: var(--primary-color);
             text-decoration: none;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .directions-btn:hover {
+            color: #d18a00;
+            text-decoration: underline;
         }
         
         /* Footer */
@@ -291,6 +456,7 @@ if ($conn->connect_error) {
             padding: 40px 0;
             border-top: 1px solid var(--border-color);
             margin-top: 40px;
+            background-color: #f8f9fa;
         }
         
         .footer-heading {
@@ -304,10 +470,12 @@ if ($conn->connect_error) {
             color: var(--text-muted);
             margin-bottom: 8px;
             text-decoration: none;
+            transition: all 0.3s;
         }
         
         .footer-link:hover {
             color: var(--primary-color);
+            padding-left: 5px;
         }
         
         .app-download {
@@ -334,6 +502,12 @@ if ($conn->connect_error) {
             color: white;
             margin-right: 10px;
             text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .social-icon:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
         }
         
         .copyright {
@@ -342,6 +516,37 @@ if ($conn->connect_error) {
             font-size: 0.85rem;
             color: var(--text-muted);
             border-top: 1px solid var(--border-color);
+            background-color: white;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .book-img-container {
+                height: 200px;
+            }
+            
+            .library-card {
+                flex-direction: column;
+            }
+            
+            .library-img {
+                width: 100%;
+                height: 120px;
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .book-col {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .book-col {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
         }
     </style>
 </head>
@@ -354,7 +559,6 @@ if ($conn->connect_error) {
         include("include/seller_header.php");
     }
     ?>
-
 
     <!-- Navigation tabs -->
     <div class="container  pt-3">
@@ -381,170 +585,183 @@ if ($conn->connect_error) {
       </a>
     </div>
 
-
-<div class="container text-center">
-    <div id="heroCarousel" class="carousel slide mx-auto" data-bs-ride="carousel" style="max-width: 800px;">
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="images/1.jpg" class="d-block w-100" alt="Philippine Book Festival">
+    <!-- Hero Carousel -->
+    <div class="container text-center">
+        <div id="heroCarousel" class="carousel slide mx-auto" data-bs-ride="carousel" style="max-width: 1200px;">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="images/1.jpg" class="d-block w-100" alt="Philippine Book Festival">
+                </div>
+                <div class="carousel-item">
+                    <img src="images/2.png" class="d-block w-100" alt="BookWagon Feature">
+                </div>
+                <div class="carousel-item">
+                    <img src="images/3.png" class="d-block w-100" alt="BookWagon Promotion">
+                </div>
+                <div class="carousel-item">
+                    <img src="images/4.jpg" class="d-block w-100" alt="BookWagon Event">
+                </div>
+                <div class="carousel-item">
+                    <img src="images/5.jpg" class="d-block w-100" alt="BookWagon Special">
+                </div>
             </div>
-            <div class="carousel-item">
-                <img src="images/2.png" class="d-block w-100" alt="BookWagon Feature">
+            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="4" aria-label="Slide 5"></button>
             </div>
-            <div class="carousel-item">
-                <img src="images/3.png" class="d-block w-100" alt="BookWagon Promotion">
-            </div>
-            <div class="carousel-item">
-                <img src="images/4.jpg" class="d-block w-100" alt="BookWagon Event">
-            </div>
-            <div class="carousel-item">
-                <img src="images/5.jpg" class="d-block w-100" alt="BookWagon Special">
-            </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-        </button>
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="4" aria-label="Slide 5"></button>
         </div>
     </div>
-</div>
     
     <!-- Most Popular -->
     <div class="container">
         <div class="section-header">
             <h4 class="section-title">Most Popular</h4>
-            <a href="#" class="see-more">See More</a>
+            <a href="explore.php?filter=popular" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
         </div>
         
-        <div class="row">
-            <div class="col-md-2 col-6 book-card">
-                <div class="text-center">
-                    <div class="book-author">Kris Johanna Laniaza</div>
-                    <img src="https://i.ibb.co/9VpvJQn/noli-me-tangere.jpg" class="book-img img-fluid" alt="Noli Me Tangere">
-                    <div class="book-title">NOLI ME TANGERE</div>
-                    <div class="book-price">
-                        <span class="price-week">₱60/week</span>
-                        <span class="price-value">₱360</span>
+        <div class="books-container">
+            <?php if ($popularBooksResult->num_rows > 0): ?>
+                <?php while($book = $popularBooksResult->fetch_assoc()): ?>
+                    <div class="book-col col-md-2 col-6">
+                        <div class="book-card">
+                            <div class="book-img-container">
+                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                                <span class="book-badge">Popular</span>
+                            </div>
+                            <div class="book-details">
+                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                                <div class="book-price">
+                                    <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
+                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
+                                </div>
+                                <div class="book-actions">
+                                    <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
+                                    <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="col-12 text-center py-4">
+                    <p>No popular books found. Check back later!</p>
                 </div>
-            </div>
-            
-            <div class="col-md-2 col-6 book-card">
-                <div class="text-center">
-                    <div class="book-author">Kris Johanna Laniaza</div>
-                    <img src="https://i.ibb.co/NnmH9QK/harry-potter.jpg" class="book-img img-fluid" alt="Harry Potter">
-                    <div class="book-title">Harry Potter and the Goblet of Fire</div>
-                    <div class="book-price">
-                        <span class="price-week">₱60/week</span>
-                        <span class="price-value">₱360</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- New Releases -->
+    <div class="container">
+        <div class="section-header">
+            <h4 class="section-title">New Releases</h4>
+            <a href="explore.php?filter=new" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
+        </div>
+        
+        <div class="books-container">
+            <?php if ($newReleasesResult->num_rows > 0): ?>
+                <?php while($book = $newReleasesResult->fetch_assoc()): ?>
+                    <div class="book-col col-md-3 col-6">
+                        <div class="book-card">
+                            <div class="book-img-container">
+                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                                <span class="book-badge">New</span>
+                            </div>
+                            <div class="book-details">
+                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                                <div class="book-price">
+                                    <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
+                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
+                                </div>
+                                <div class="book-actions">
+                                    <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
+                                    <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="col-12 text-center py-4">
+                    <p>No new releases found. Check back later!</p>
                 </div>
-            </div>
-            
-            <div class="col-md-2 col-6 book-card">
-                <div class="text-center">
-                    <div class="book-author">Zenepachi Zenny</div>
-                    <img src="https://i.ibb.co/Ws7vwQ7/handmaids-tale.jpg" class="book-img img-fluid" alt="The Handmaid's Tale">
-                    <div class="book-title">The Handmaid's Tale</div>
-                    <div class="book-price">
-                        <span class="price-week">₱70/week</span>
-                        <span class="price-value">₱380</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-2 col-6 book-card">
-                <div class="text-center">
-                    <div class="book-author">Jay anne Galas</div>
-                    <img src="https://i.ibb.co/gj5rvTV/to-kill-mockingbird.jpg" class="book-img img-fluid" alt="To Kill a Mockingbird">
-                    <div class="book-title">To Kill a Mockingbird</div>
-                    <div class="book-price">
-                        <span class="price-week">₱50/week</span>
-                        <span class="price-value">₱350</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-2 col-6 book-card">
-                <div class="text-center">
-                    <div class="book-author">Jay anne Galas</div>
-                    <img src="https://i.ibb.co/rQbXPJx/pride-prejudice.jpg" class="book-img img-fluid" alt="Pride and Prejudice">
-                    <div class="book-title">Pride and Prejudice</div>
-                    <div class="book-price">
-                        <span class="price-week">₱65/week</span>
-                        <span class="price-value">₱350</span>
-                    </div>
-                </div>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
     
     <!-- Explore Section -->
     <div class="container">
         <div class="section-header">
-            <h4 class="section-title">Explore</h4>
+            <h4 class="section-title">Explore by Theme</h4>
         </div>
         
-        <div class="category-tabs">
-            <div class="category-tab active">All</div>
-            <div class="category-tab">Sci-Fi</div>
-            <div class="category-tab">Education</div>
-            <div class="category-tab">Non-Fiction</div>
-            <div class="category-tab">Fiction</div>
-            <div class="category-tab">Drama</div>
+        <div class="theme-tabs">
+            <div class="theme-tab active">All</div>
+            <?php foreach($themes as $theme): ?>
+                <div class="theme-tab"><?php echo htmlspecialchars($theme); ?></div>
+            <?php endforeach; ?>
         </div>
         
-        <div class="row">
-            <div class="col-md-3 col-6 book-card">
-                <div class="text-center">
-                    <img src="https://i.ibb.co/ZfkKKqH/drama-queen.jpg" class="book-img img-fluid" alt="The Fall of a Drama Queen">
-                    <div class="book-title">The Fall of a Drama Queen</div>
-                </div>
-            </div>
+        <div class="books-container">
+            <?php 
+            // Fetch 4 random books to display in explore section
+            $exploreQuery = "SELECT * FROM books ORDER BY RAND() LIMIT 4";
+            $exploreResult = $conn->query($exploreQuery);
             
-            <div class="col-md-3 col-6 book-card">
-                <div class="text-center">
-                    <img src="https://i.ibb.co/gj5rvTV/to-kill-mockingbird.jpg" class="book-img img-fluid" alt="To Kill a Mockingbird">
-                    <div class="book-title">To Kill a Mockingbird</div>
+            if ($exploreResult->num_rows > 0): 
+                while($book = $exploreResult->fetch_assoc()): ?>
+                    <div class="book-col col-md-3 col-6">
+                        <div class="book-card">
+                            <div class="book-img-container">
+                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                            </div>
+                            <div class="book-details">
+                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                                <?php if($book['theme']): ?>
+                                    <div class="book-theme"><small class="text-muted">Theme: <?php echo htmlspecialchars($book['theme']); ?></small></div>
+                                <?php endif; ?>
+                                <div class="book-price">
+                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
+                                </div>
+                                <div class="book-actions">
+                                    <a href="book_details.php?id=<?php echo $book['book_id']; ?>" class="btn-rent">View Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="col-12 text-center py-4">
+                    <p>No books found. Check back later!</p>
                 </div>
-            </div>
-            
-            <div class="col-md-3 col-6 book-card">
-                <div class="text-center">
-                    <img src="https://i.ibb.co/rQbXPJx/pride-prejudice.jpg" class="book-img img-fluid" alt="Pride and Prejudice">
-                    <div class="book-title">Pride and Prejudice</div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-6 book-card">
-                <div class="text-center">
-                    <img src="https://i.ibb.co/Ws7vwQ7/handmaids-tale.jpg" class="book-img img-fluid" alt="The Handmaid's Tale">
-                    <div class="book-title">The Handmaid's Tale</div>
-                </div>
-            </div>
+            <?php endif; ?>
         </div>
         
         <div class="text-end mt-3 mb-4">
-            <a href="#" class="see-more">See More</a>
+            <a href="rentbooks.php" class="see-more">Browse All Books <i class="fas fa-chevron-right"></i></a>
         </div>
     </div>
     
     <!-- Libraries Section -->
     <div class="container libraries-section">
-        <h4 class="section-title mb-3">Libraries</h4>
+        <h4 class="section-title mb-3">Libraries Near You</h4>
         
         <div class="search-bar">
-            <input type="text" class="form-control" placeholder="Search">
+            <i class="fas fa-search"></i>
+            <input type="text" class="form-control" placeholder="Search libraries...">
         </div>
         
         <div class="mb-2">Suggested for you</div>
@@ -567,7 +784,7 @@ if ($conn->connect_error) {
                     Davao City 8000
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <a class="directions-btn">
+                    <a href="#" class="directions-btn">
                         Get Directions <i class="fa-solid fa-turn-down"></i>
                     </a>
                     <div class="library-status">
@@ -596,7 +813,7 @@ if ($conn->connect_error) {
                     Davao City, 8000 Davao del Sur
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <a class="directions-btn">
+                    <a href="#" class="directions-btn">
                         Get Directions <i class="fa-solid fa-turn-down"></i>
                     </a>
                     <div class="library-status">
@@ -625,7 +842,7 @@ if ($conn->connect_error) {
                     Davao City, Davao del Sur
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <a class="directions-btn">
+                    <a href="#" class="directions-btn">
                         Get Directions <i class="fa-solid fa-turn-down"></i>
                     </a>
                     <div class="library-status">
@@ -668,12 +885,19 @@ if ($conn->connect_error) {
                 
                 <div class="col-md-3 col-6 mb-4">
                     <div class="mb-4">
+                        <h5 class="footer-heading">Get the App</h5>
                         <a href="#" class="app-download">
                             <img src="https://i.ibb.co/kSzkRgQ/app-store.png" alt="App Store">
                         </a>
                         <a href="#" class="app-download">
                             <img src="https://i.ibb.co/FqJsKND/play-store.png" alt="Play Store">
                         </a>
+                    </div>
+                    <div class="social-links">
+                        <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
                     </div>
                 </div>
             </div>
@@ -683,12 +907,10 @@ if ($conn->connect_error) {
     <div class="copyright">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
-                <div>© Copyright 2022, All Rights Reserved by ClarkSys</div>
-                <div class="social-links">
-                    <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
+                <div>© Copyright <?php echo date('Y'); ?>, All Rights Reserved by BookWagon</div>
+                <div>
+                    <a href="#" class="text-muted me-3">Terms</a>
+                    <a href="#" class="text-muted">Privacy</a>
                 </div>
             </div>
         </div>
@@ -703,9 +925,20 @@ if ($conn->connect_error) {
                 interval: 3000, // Change slides every 3 seconds
                 wrap: true     // Continue from last to first slide
             });
+            
+            // Theme tab functionality
+            const tabs = document.querySelectorAll('.theme-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    // Here you would typically filter books by theme
+                    // For now it's just UI demonstration
+                });
+            });
         });
     </script>
-        <script>
+    <script>
         // Prevent back button after logout
         window.onload = function() {
             if(typeof window.history.pushState == 'function') {
@@ -718,15 +951,15 @@ if ($conn->connect_error) {
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-  document.querySelector('#userDropdown').addEventListener('click', function(e) {
-    e.preventDefault();
-    var dropdown = bootstrap.Dropdown.getOrCreateInstance(this);
-    dropdown.toggle();
-  });
-});
+            document.querySelector('#userDropdown').addEventListener('click', function(e) {
+                e.preventDefault();
+                var dropdown = bootstrap.Dropdown.getOrCreateInstance(this);
+                dropdown.toggle();
+            });
+        });
     </script>
 
-<script src="https://kit.fontawesome.com/yourkitcode.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/yourkitcode.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

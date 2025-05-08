@@ -97,6 +97,10 @@ if (isset($_POST['update_item']) && isset($_POST['cart_id'])) {
     $quantity = $_POST['quantity'];
     $purchaseType = $_POST['purchase_type'];
     $rentalWeeks = $purchaseType == 'rent' ? $_POST['rental_weeks'] : NULL;
+    
+    // Debug logging
+    error_log("Updating cart item: ID=$cartId, Quantity=$quantity, Type=$purchaseType, Weeks=" . ($rentalWeeks ?? 'NULL'));
+    
     // Get book_id from cart item
     $getCartStmt = $conn->prepare("SELECT book_id FROM cart WHERE cart_id = ? AND user_id = ?");
     $getCartStmt->bind_param("ii", $cartId, $userId);
@@ -119,20 +123,36 @@ if (isset($_POST['update_item']) && isset($_POST['cart_id'])) {
         if ($quantity <= $availableStock) {
             $updateStmt = $conn->prepare("UPDATE cart SET quantity = ?, purchase_type = ?, rental_weeks = ? WHERE cart_id = ? AND user_id = ?");
             $updateStmt->bind_param("isiii", $quantity, $purchaseType, $rentalWeeks, $cartId, $userId);
-            $updateStmt->execute();
             
-            $_SESSION['cart_message'] = "Cart updated successfully.";
-            $_SESSION['cart_message_type'] = "success";
+            if ($updateStmt->execute()) {
+                $_SESSION['cart_message'] = "Cart updated successfully.";
+                $_SESSION['cart_message_type'] = "success";
+                
+                // Debug logging of success
+                error_log("Successfully updated cart: cart_id=$cartId, rental_weeks=$rentalWeeks");
+            } else {
+                // Log error if update fails
+                error_log("Error updating cart: " . $updateStmt->error);
+                $_SESSION['cart_message'] = "Error updating cart. Please try again.";
+                $_SESSION['cart_message_type'] = "danger";
+            }
         } else {
             $_SESSION['cart_message'] = "Sorry, only {$availableStock} item(s) available in stock.";
             $_SESSION['cart_message_type'] = "warning";
         }
     }
     
+    // Force reset of any cached cart data
+    unset($_SESSION['cart_subtotal']);
+    unset($_SESSION['cart_tax']);
+    unset($_SESSION['cart_shipping']);
+    unset($_SESSION['cart_total']);
+    
     header("Location: cart.php");
     exit();
 }
 
+// After all the cart update/remove/add operations, fetch the latest cart data
 // Fetch user's cart items
 $cartStmt = $conn->prepare("SELECT c.*, b.title, b.author, b.cover_image, b.price, b.rent_price, b.stock 
                            FROM cart c 
@@ -144,17 +164,15 @@ $cartStmt->execute();
 $cartResult = $cartStmt->get_result();
 $cartItems = $cartResult->fetch_all(MYSQLI_ASSOC);
 
+// Debug log cart items
+if (!empty($cartItems)) {
+    foreach ($cartItems as $item) {
+        error_log("Cart Item: ID={$item['cart_id']}, Book={$item['title']}, Type={$item['purchase_type']}, Weeks={$item['rental_weeks']}");
+    }
+}
+
 // Calculate cart totals
 $subtotal = 0;
-$tax = 0;
-$shipping = 0;
-$discount = 0;
-
-
-
-
-$subtotal = 0;
-$tax = 0;
 $shipping = 0;
 $discount = 0;
 
@@ -166,30 +184,23 @@ foreach ($cartItems as $item) {
     }
 }
 
-// Apply shipping if subtotal is less than $50
-$freeShippingThreshold = 50;
-$shipping = $subtotal < $freeShippingThreshold ? 60 : 0;
-
-// Calculate tax (10%)
-$tax = $subtotal * 0.10;
-
-// Calculate total
-$total = $subtotal + $tax + $shipping - $discount;
+// Calculate total (without tax and shipping for now)
+// Shipping fee will be added only for Cash on Delivery at checkout
+$total = $subtotal - $discount;
 
 // Calculate amount needed for free shipping
+$freeShippingThreshold = 50;
 $amountForFreeShipping = max(0, $freeShippingThreshold - $subtotal);
 
 // Store in session for cart page display
 $_SESSION['cart_subtotal'] = $subtotal;
-$_SESSION['cart_tax'] = $tax;
-$_SESSION['cart_shipping'] = $shipping;
+$_SESSION['cart_shipping'] = 0; // Will be determined at checkout based on payment method
 $_SESSION['cart_total'] = $total;
 
 // Store cart details in session for checkout page
 $_SESSION['cart_details'] = [
     'subtotal' => $subtotal,
-    'tax' => $tax,
-    'shipping' => $shipping,
+    'shipping' => 0, // Will be determined at checkout based on payment method
     'discount' => $discount,
     'total' => $total,
     'itemCount' => count($cartItems),
@@ -203,6 +214,9 @@ $_SESSION['cart_details'] = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Shopping Cart - BookWagon</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -510,9 +524,50 @@ $_SESSION['cart_details'] = [
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.3s;
+}
+
+.loading-overlay.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <!-- Include Header -->
     <?php 
     if ($userType == 'user') {
@@ -711,11 +766,7 @@ $_SESSION['cart_details'] = [
                             
                             <div class="cart-summary-row">
                                 <span>Shipping cost</span>
-                                <?php if ($shipping > 0): ?>
-                                <span>₱<?php echo number_format($shipping, 2); ?></span>
-                                <?php else: ?>
-                                <span>FREE</span>
-                                <?php endif; ?>
+                                <span>To be determined at checkout</span>
                             </div>
                             
                             <?php if ($discount > 0): ?>
@@ -725,31 +776,17 @@ $_SESSION['cart_details'] = [
                             </div>
                             <?php endif; ?>
                             
-                            <div class="cart-summary-row">
-                                <span>Tax</span>
-                                <span>₱<?php echo number_format($tax, 2); ?></span>
-                            </div>
-                            
                             <div class="cart-summary-row border-top pt-2">
                                 <span class="fw-bold">Estimated Total</span>
                                 <span class="fw-bold">₱<?php echo number_format($total, 2); ?></span>
                             </div>
                             
-                            <?php if ($amountForFreeShipping > 0): ?>
                             <div class="free-shipping-message">
-                                <div>You're ₱<?php echo number_format($amountForFreeShipping, 2); ?> away from free shipping!</div>
+                                <div>Note: ₱60 shipping fee will be added for Cash on Delivery</div>
                                 <div class="free-shipping-bubble">
                                     <i class="fas fa-truck"></i>
                                 </div>
                             </div>
-                            <?php else: ?>
-                            <div class="free-shipping-message bg-success text-white">
-                                <div>You qualify for free shipping!</div>
-                                <div class="free-shipping-bubble">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                            </div>
-                            <?php endif; ?>
                             
                             <a href="checkout.php" class="checkout-button text-center text-decoration-none <?php echo empty($cartItems) ? 'disabled' : ''; ?>">
                                 <i class="fas fa-lock me-2"></i> Checkout
@@ -766,40 +803,10 @@ $_SESSION['cart_details'] = [
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Purchase type toggle
+        // Document ready handler
         document.addEventListener('DOMContentLoaded', function() {
-    const purchaseOptions = document.querySelectorAll('.purchase-option');
-    
-    purchaseOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            const cartId = this.getAttribute('data-cart-id');
-            const type = this.getAttribute('data-type');
-            const purchaseTypeInput = document.getElementById(`purchase_type_${cartId}`);
-            const rentDuration = document.getElementById(`rent_duration_${cartId}`);
-            
-            // Update active state
-            document.querySelectorAll(`.purchase-option[data-cart-id="${cartId}"]`).forEach(opt => {
-                opt.classList.remove('active');
-            });
-            this.classList.add('active');
-            
-            // Update hidden input with the clicked purchase type
-            purchaseTypeInput.value = type;
-            
-            // Show/hide rent duration
-            if (type === 'rent') {
-                rentDuration.classList.add('active');
-            } else {
-                rentDuration.classList.remove('active');
-            }
-            
-            // Recalculate cart totals
-            recalculateCart();
+            // Code was moved to the main script below
         });
-    });
-    
-    // Rest of your existing cart.js code...
-});
     </script>
     <script>
     // Purchase type toggle and dynamic price updates
@@ -809,9 +816,7 @@ $_SESSION['cart_details'] = [
         // Function to recalculate cart totals
         function recalculateCart() {
             let subtotal = 0;
-            let shipping = 0;
             let discount = 0;
-            const freeShippingThreshold = 50; // Same as PHP value
             
             // Loop through all cart items to calculate new subtotal
             document.querySelectorAll('.cart-item').forEach(item => {
@@ -836,61 +841,16 @@ $_SESSION['cart_details'] = [
                 subtotal += itemPrice * quantity;
             });
             
-            // Apply shipping if subtotal is less than threshold
-            if (subtotal < freeShippingThreshold) {
-                shipping = 10; // Same as PHP value
-            }
-            
-            // Calculate tax (10%)
-            const tax = subtotal * 0.10;
-            
-            // Calculate total
-            const total = subtotal + tax + shipping - discount;
-            
-            // Calculate amount needed for free shipping
-            const amountForFreeShipping = freeShippingThreshold - subtotal;
+            // Calculate total (no tax, no shipping fee now)
+            const total = subtotal - discount;
             
             // Update UI with new totals
             document.querySelector('.cart-summary-row:nth-child(3) span:last-child').textContent = 
                 subtotal > 0 ? `₱${subtotal.toFixed(2)}` : '₱0.00';
                 
-            // Update shipping display
-            const shippingElement = document.querySelector('.cart-summary-row:nth-child(4) span:last-child');
-            if (shipping > 0) {
-                shippingElement.textContent = `₱${shipping.toFixed(2)}`;
-            } else {
-                shippingElement.textContent = 'FREE';
-            }
-            
-            // Update tax
-            document.querySelector('.cart-summary-row:nth-child(5) span:last-child').textContent = 
-                `₱${tax.toFixed(2)}`;
-                
             // Update total
-            document.querySelector('.cart-summary-row:nth-child(6) span:last-child').textContent = 
+            document.querySelector('.cart-summary-row:nth-child(5) span:last-child').textContent = 
                 `₱${total.toFixed(2)}`;
-                
-            // Update free shipping message
-            const freeShippingMessage = document.querySelector('.free-shipping-message');
-            if (amountForFreeShipping > 0) {
-                freeShippingMessage.innerHTML = `
-                    <div>You're ₱${amountForFreeShipping.toFixed(2)} away from free shipping!</div>
-                    <div class="free-shipping-bubble">
-                        <i class="fas fa-truck"></i>
-                    </div>
-                `;
-                freeShippingMessage.classList.remove('bg-success', 'text-white');
-                freeShippingMessage.classList.add('bg-light');
-            } else {
-                freeShippingMessage.innerHTML = `
-                    <div>You qualify for free shipping!</div>
-                    <div class="free-shipping-bubble">
-                        <i class="fas fa-check"></i>
-                    </div>
-                `;
-                freeShippingMessage.classList.remove('bg-light');
-                freeShippingMessage.classList.add('bg-success', 'text-white');
-            }
             
             // Also update mobile summary if it exists
             const mobileSummary = document.querySelector('.cart-summary-mobile');
@@ -920,18 +880,86 @@ $_SESSION['cart_details'] = [
                 // Show/hide rent duration
                 if (type === 'rent') {
                     rentDuration.classList.add('active');
+                    
+                    // Make sure rental weeks is set to a valid value when switching to rent
+                    const rentalWeeksSelect = rentDuration.querySelector('select[name="rental_weeks"]');
+                    if (rentalWeeksSelect && rentalWeeksSelect.value === '') {
+                        rentalWeeksSelect.value = '1';
+                    }
+                    
+                    console.log(`Switched to rent: cart_id=${cartId}, rental_weeks=${rentalWeeksSelect ? rentalWeeksSelect.value : 'unknown'}`);
                 } else {
                     rentDuration.classList.remove('active');
                 }
                 
-                // Recalculate cart totals
+                // Recalculate cart totals for visual feedback
                 recalculateCart();
+                
+                // Auto-submit the form when purchase type changes
+                // Find the closest form and submit it
+                const form = this.closest('form');
+                if (form) {
+                    // Show loading overlay
+                    document.getElementById('loadingOverlay').classList.add('active');
+                    
+                    // Add a hidden input for update_item
+                    const updateItemInput = document.createElement('input');
+                    updateItemInput.type = 'hidden';
+                    updateItemInput.name = 'update_item';
+                    updateItemInput.value = '1';
+                    form.appendChild(updateItemInput);
+                    
+                    // Add a small delay to allow the user to see the change before form submission
+                    setTimeout(() => {
+                        form.submit();
+                    }, 300);
+                }
             });
         });
         
         // Also add event listeners to quantity and rental weeks dropdowns
         document.querySelectorAll('select[name="quantity"], select[name="rental_weeks"]').forEach(select => {
-            select.addEventListener('change', recalculateCart);
+            select.addEventListener('change', function() {
+                // Recalculate cart totals for visual feedback
+                recalculateCart();
+                
+                // Auto-submit the form when rental weeks or quantity changes
+                // Find the closest form and submit it
+                const form = this.closest('form');
+                if (form) {
+                    // Show loading overlay
+                    document.getElementById('loadingOverlay').classList.add('active');
+                    
+                    // Make sure the rental_weeks value is properly set if this is a rental
+                    const cartId = form.querySelector('input[name="cart_id"]').value;
+                    const purchaseType = document.getElementById(`purchase_type_${cartId}`).value;
+                    
+                    if (purchaseType === 'rent') {
+                        // Ensure the value is passed correctly
+                        const rentalWeeks = this.value;
+                        console.log(`Submitting form: cart_id=${cartId}, purchase_type=${purchaseType}, rental_weeks=${rentalWeeks}`);
+                    }
+                    
+                    // Add a hidden input for update_item
+                    const updateItemInput = document.createElement('input');
+                    updateItemInput.type = 'hidden';
+                    updateItemInput.name = 'update_item';
+                    updateItemInput.value = '1';
+                    form.appendChild(updateItemInput);
+                    
+                    // Add a small delay to allow the user to see the change before form submission
+                    setTimeout(() => {
+                        form.submit();
+                    }, 300);
+                }
+            });
+        });
+        
+        // Initialize all forms to show loading overlay on submit
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                document.getElementById('loadingOverlay').classList.add('active');
+            });
         });
     });
 </script>

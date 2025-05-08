@@ -1,47 +1,98 @@
 <?php
-include("../session.php");
+// Include connection and session files
 include("../connect.php");
+include("../session.php");
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $userId = $_SESSION['id'];
-    $title = $conn->real_escape_string($_POST['title']);
-    $author = $conn->real_escape_string($_POST['author']);
-    $description = $conn->real_escape_string($_POST['description']);
-    $condition = $conn->real_escape_string($_POST['condition']);
+// Set the content type to JSON
+header('Content-Type: application/json');
+
+// Check if the user is logged in
+if (!isset($_SESSION['id'])) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'You must be logged in to add a book'
+    ]);
+    exit;
+}
+
+// Get the current user's ID
+$userId = $_SESSION['id'];
+
+// Validate required fields
+$required_fields = ['title', 'author', 'condition'];
+foreach ($required_fields as $field) {
+    if (!isset($_POST[$field]) || empty($_POST[$field])) {
+        echo json_encode([
+            'success' => false,
+            'message' => "Missing required field: $field"
+        ]);
+        exit;
+    }
+}
+
+// Check if image was uploaded
+if (!isset($_FILES['book_image']) || $_FILES['book_image']['error'] !== UPLOAD_ERR_OK) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Book image is required'
+    ]);
+    exit;
+}
+
+try {
+    // Process the uploaded image
+    $uploadDir = '../uploads/books/';
     
-    // Handle file upload
-    $targetDir = "../uploads/books/";
-    if (!file_exists($targetDir)) {
-        mkdir($targetDir, 0777, true);
+    // Create directory if it doesn't exist
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
     }
     
-    $fileName = uniqid() . '_' . basename($_FILES["book_image"]["name"]);
-    $targetFilePath = $targetDir . $fileName;
-    $imageFileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
+    // Generate a unique filename
+    $filename = uniqid() . '_' . basename($_FILES['book_image']['name']);
+    $uploadPath = $uploadDir . $filename;
     
-    // Validate file type
-    $allowTypes = array('jpg', 'jpeg', 'png', 'gif');
-    if (in_array($imageFileType, $allowTypes)) {
-        if (move_uploaded_file($_FILES["book_image"]["tmp_name"], $targetFilePath)) {
-            $query = "INSERT INTO book_swaps (user_id, book_title, author, description, 
-                     `condition`, image_path, status) 
-                     VALUES (?, ?, ?, ?, ?, ?, 'available')";
-            
-            $stmt = $conn->prepare($query);
-            $imagePath = "uploads/books/" . $fileName;
-            $stmt->bind_param("isssss", $userId, $title, $author, $description, $condition, $imagePath);
-            
-            if ($stmt->execute()) {
-                echo json_encode(['success' => true, 'message' => 'Book added successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Error adding book: ' . $stmt->error]);
-            }
-            $stmt->close();
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error uploading image']);
-        }
+    // Move the uploaded file
+    if (!move_uploaded_file($_FILES['book_image']['tmp_name'], $uploadPath)) {
+        throw new Exception('Failed to upload image');
+    }
+    
+    // Get the relative path for storage in database
+    $relativePath = 'uploads/books/' . $filename;
+    
+    // Extract other form data
+    $title = $_POST['title'];
+    $author = $_POST['author'];
+    $condition = $_POST['condition'];
+    $description = isset($_POST['description']) ? $_POST['description'] : null;
+    $genre = isset($_POST['genre']) ? $_POST['genre'] : null;
+    
+    // Insert the book into the database
+    $query = "INSERT INTO book_swaps (user_id, book_title, author, description, `condition`, image_path, genre) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
+    
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("issssss", $userId, $title, $author, $description, $condition, $relativePath, $genre);
+    $success = $stmt->execute();
+    
+    if ($success) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Book added successfully!',
+            'book_id' => $conn->insert_id
+        ]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPG, JPEG, PNG & GIF files are allowed.']);
+        throw new Exception("Failed to add book");
     }
+    
+} catch (Exception $e) {
+    // Log the error (in a production environment)
+    error_log('Error adding book: ' . $e->getMessage());
+    
+    // Return error response
+    echo json_encode([
+        'success' => false,
+        'message' => 'Failed to add book: ' . $e->getMessage()
+    ]);
 }
 ?>

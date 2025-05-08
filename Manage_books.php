@@ -40,6 +40,36 @@ if ($userType !== 'seller') {
     exit();
 }
 
+// Add a function to create the new database fields if they don't exist
+function ensure_pricing_fields_exist($conn) {
+    $fields_to_add = [
+        'base_rental_fee' => 'DECIMAL(10,2) DEFAULT NULL',
+        'handling_fee' => 'DECIMAL(10,2) DEFAULT NULL',
+        'condition_multiplier' => 'DECIMAL(5,2) DEFAULT NULL',
+        'book_value' => 'DECIMAL(10,2) DEFAULT NULL',
+        'listing_fee' => 'DECIMAL(10,2) DEFAULT NULL',
+        'markup_percentage' => 'INT DEFAULT NULL'
+    ];
+    
+    // Check if fields exist
+    $result = $conn->query("SHOW COLUMNS FROM books");
+    $existing_fields = [];
+    while($row = $result->fetch_assoc()) {
+        $existing_fields[] = $row['Field'];
+    }
+    
+    // Add missing fields
+    foreach($fields_to_add as $field => $definition) {
+        if (!in_array($field, $existing_fields)) {
+            $conn->query("ALTER TABLE books ADD COLUMN $field $definition");
+            error_log("Added field $field to books table");
+        }
+    }
+}
+
+// Call the function to ensure fields exist
+ensure_pricing_fields_exist($conn);
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check which action is being performed
@@ -63,6 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stock = intval($_POST['stock']);
             $description = mysqli_real_escape_string($conn, $_POST['description']);
             
+            // Pricing strategy fields
+            $base_rental_fee = floatval($_POST['base_rental_fee'] ?? 0);
+            // Override with fixed values regardless of what was submitted
+            $handling_fee = 10.00; // Fixed value
+            $condition_multiplier = floatval($_POST['condition_multiplier'] ?? 1.0);
+            $book_value = floatval($_POST['book_value'] ?? 0);
+            // Override with fixed values regardless of what was submitted
+            $listing_fee = 30.00; // Fixed value
+            $markup_percentage = 30; // Fixed value
+            
             // Handle image upload
             $cover_image = '';
             if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
@@ -75,14 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Insert book into database with new fields
-            $query = "INSERT INTO books (user_id, title, author, ISBN, genre, theme, book_type, `condition`, damages, popularity, price, rent_price, stock, description, cover_image) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $query = "INSERT INTO books (user_id, title, author, ISBN, genre, theme, book_type, `condition`, damages, popularity, price, rent_price, stock, description, cover_image, base_rental_fee, handling_fee, condition_multiplier, book_value, listing_fee, markup_percentage) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             // Add this before your INSERT query
             error_log("Cover image path before DB insert: " . $cover_image);
 
             $stmt = $conn->prepare($query);
-            $stmt->bind_param("isssssssssddiis", $userId, $title, $author, $isbn, $genre, $theme, $book_type, $condition, $damages, $popularity, $price, $rent_price, $stock, $description, $cover_image);
+            $stmt->bind_param("isssssssssddiisdddddi", $userId, $title, $author, $isbn, $genre, $theme, $book_type, $condition, $damages, $popularity, $price, $rent_price, $stock, $description, $cover_image, $base_rental_fee, $handling_fee, $condition_multiplier, $book_value, $listing_fee, $markup_percentage);
             if ($stmt->execute()) {
                 $success_message = "Book added successfully!";
                 // Redirect to prevent form resubmission on refresh
@@ -125,6 +165,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stock = intval($_POST['stock']);
                     $description = mysqli_real_escape_string($conn, $_POST['description']);
                     
+                    // Pricing strategy fields
+                    $base_rental_fee = floatval($_POST['base_rental_fee'] ?? 0);
+                    // Override with fixed values regardless of what was submitted
+                    $handling_fee = 10.00; // Fixed value
+                    $condition_multiplier = floatval($_POST['condition_multiplier'] ?? 1.0);
+                    $book_value = floatval($_POST['book_value'] ?? 0);
+                    // Override with fixed values regardless of what was submitted
+                    $listing_fee = 30.00; // Fixed value
+                    $markup_percentage = 30; // Fixed value
+                    
                     // Simplified file upload approach for editing
                     $cover_image_query = "";
                     $cover_image = $book_data['cover_image']; // Keep existing cover by default
@@ -141,21 +191,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!empty($cover_image_query)) {
                         $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, 
                                   book_type = ?, `condition` = ?, damages = ?, popularity = ?, 
-                                  price = ?, rent_price = ?, stock = ?, description = ?, cover_image = ? 
+                                  price = ?, rent_price = ?, stock = ?, description = ?, cover_image = ?,
+                                  base_rental_fee = ?, handling_fee = ?, condition_multiplier = ?,
+                                  book_value = ?, listing_fee = ?, markup_percentage = ? 
                                   WHERE book_id = ? AND user_id = ?";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param("sssssssssddissii", $title, $author, $isbn, $genre, $theme, 
+                        $stmt->bind_param("sssssssssddiisdddddiii", $title, $author, $isbn, $genre, $theme, 
                                           $book_type, $condition, $damages, $popularity, 
-                                          $price, $rent_price, $stock, $description, $cover_image, $book_id, $userId);
+                                          $price, $rent_price, $stock, $description, $cover_image,
+                                          $base_rental_fee, $handling_fee, $condition_multiplier,
+                                          $book_value, $listing_fee, $markup_percentage,
+                                          $book_id, $userId);
                     } else {
                         $query = "UPDATE books SET title = ?, author = ?, ISBN = ?, genre = ?, theme = ?, 
                                   book_type = ?, `condition` = ?, damages = ?, popularity = ?, 
-                                  price = ?, rent_price = ?, stock = ?, description = ? 
+                                  price = ?, rent_price = ?, stock = ?, description = ?,
+                                  base_rental_fee = ?, handling_fee = ?, condition_multiplier = ?,
+                                  book_value = ?, listing_fee = ?, markup_percentage = ? 
                                   WHERE book_id = ? AND user_id = ?";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param("sssssssssddisii", $title, $author, $isbn, $genre, $theme, 
+                        $stmt->bind_param("sssssssssddisdddddiiii", $title, $author, $isbn, $genre, $theme, 
                                          $book_type, $condition, $damages, $popularity, 
-                                         $price, $rent_price, $stock, $description, $book_id, $userId);
+                                         $price, $rent_price, $stock, $description,
+                                         $base_rental_fee, $handling_fee, $condition_multiplier,
+                                         $book_value, $listing_fee, $markup_percentage,
+                                         $book_id, $userId);
                     }
                     
                     if ($stmt->execute()) {
@@ -979,7 +1039,7 @@ body {
                                 <!-- New Field: Condition -->
                                 <div class="mb-3">
                                     <label for="condition" class="form-label">Condition</label>
-                                    <select class="form-select" id="condition" name="condition" required>
+                                    <select class="form-select" id="condition" name="condition" required onchange="updateConditionMultiplier(); calculatePrices();">
                                         <option value="New">New</option>
                                         <option value="Like New">Like New</option>
                                         <option value="Very Good">Very Good</option>
@@ -993,13 +1053,71 @@ body {
                                     <label for="damages" class="form-label">Damages (if any)</label>
                                     <textarea class="form-control" id="damages" name="damages" rows="2" placeholder="Describe any damages or defects..."></textarea>
                                 </div>
+                                
+                                <!-- Pricing Strategy Fields -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Pricing Strategy</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Rental Pricing Fields -->
+                                        <h6>Rental Pricing</h6>
+                                        <div class="row mb-2">
+                                            <div class="col-md-6">
+                                                <label for="base_rental_fee" class="form-label">Base Rental Fee (₱)</label>
+                                                <input type="number" class="form-control" id="base_rental_fee" name="base_rental_fee" step="0.01" min="0" value="50" onchange="calculatePrices()">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="handling_fee" class="form-label">Handling Fee (₱)</label>
+                                                <input type="number" class="form-control" id="handling_fee" name="handling_fee" step="0.01" min="0" value="10" onchange="calculatePrices()" readonly>
+                                                <div class="form-text">Fixed handling fee</div>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="condition_multiplier" class="form-label">Condition Multiplier</label>
+                                                <input type="number" class="form-control" id="condition_multiplier" name="condition_multiplier" step="0.01" min="0.5" value="1.2" readonly>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Sales Pricing Fields -->
+                                        <h6>Sales Pricing</h6>
+                                        <div class="row mb-2">
+                                            <div class="col-md-6">
+                                                <label for="book_value" class="form-label">Book Value (₱)</label>
+                                                <input type="number" class="form-control" id="book_value" name="book_value" step="0.01" min="0" value="200" onchange="calculatePrices()">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="listing_fee" class="form-label">Listing Fee (₱)</label>
+                                                <input type="number" class="form-control" id="listing_fee" name="listing_fee" step="0.01" min="0" value="30" onchange="calculatePrices()" readonly>
+                                                <div class="form-text">Fixed listing fee</div>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="markup_percentage" class="form-label">Markup (%)</label>
+                                                <input type="number" class="form-control" id="markup_percentage" name="markup_percentage" step="1" min="0" max="100" value="30" onchange="calculatePrices()" readonly>
+                                                <div class="form-text">Fixed markup percentage</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="mb-3">
                                     <label for="price" class="form-label">Price (Whole book) (₱)</label>
-                                    <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="calculatePrices()">Recalculate</button>
+                                    </div>
+                                    <div class="form-text">Suggested: ₱<span id="suggested_price">0.00</span></div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="rent_price" class="form-label">Rent Price (Per week) (₱)</label>
-                                    <input type="number" class="form-control" id="rent_price" name="rent_price" step="0.01" min="0" required>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="rent_price" name="rent_price" step="0.01" min="0" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="calculatePrices()">Recalculate</button>
+                                    </div>
+                                    <div class="form-text">Suggested: ₱<span id="suggested_rent_price">0.00</span></div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="stock" class="form-label">Stock</label>
@@ -1084,7 +1202,7 @@ body {
                                     <!-- New Field: Condition -->
                                     <div class="mb-3">
                                         <label for="edit_condition" class="form-label">Condition</label>
-                                        <select class="form-select" id="edit_condition" name="condition" required>
+                                        <select class="form-select" id="edit_condition" name="condition" required onchange="updateEditConditionMultiplier(); calculateEditPrices();">
                                             <option value="New">New</option>
                                             <option value="Like New">Like New</option>
                                             <option value="Very Good">Very Good</option>
@@ -1098,14 +1216,73 @@ body {
                                         <label for="edit_damages" class="form-label">Damages (if any)</label>
                                         <textarea class="form-control" id="edit_damages" name="damages" rows="2" placeholder="Describe any damages or defects..."></textarea>
                                     </div>
+                                    
+                                    <!-- Pricing Strategy Fields -->
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Pricing Strategy</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Rental Pricing Fields -->
+                                            <h6>Rental Pricing</h6>
+                                            <div class="row mb-2">
+                                                <div class="col-md-6">
+                                                    <label for="edit_base_rental_fee" class="form-label">Base Rental Fee (₱)</label>
+                                                    <input type="number" class="form-control" id="edit_base_rental_fee" name="base_rental_fee" step="0.01" min="0" value="50" onchange="calculateEditPrices()">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="edit_handling_fee" class="form-label">Handling Fee (₱)</label>
+                                                    <input type="number" class="form-control" id="edit_handling_fee" name="handling_fee" step="0.01" min="0" value="10" onchange="calculateEditPrices()" readonly>
+                                                    <div class="form-text">Fixed handling fee</div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="edit_condition_multiplier" class="form-label">Condition Multiplier</label>
+                                                    <input type="number" class="form-control" id="edit_condition_multiplier" name="condition_multiplier" step="0.01" min="0.5" value="1.2" readonly>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Sales Pricing Fields -->
+                                            <h6>Sales Pricing</h6>
+                                            <div class="row mb-2">
+                                                <div class="col-md-6">
+                                                    <label for="edit_book_value" class="form-label">Book Value (₱)</label>
+                                                    <input type="number" class="form-control" id="edit_book_value" name="book_value" step="0.01" min="0" value="200" onchange="calculateEditPrices()">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="edit_listing_fee" class="form-label">Listing Fee (₱)</label>
+                                                    <input type="number" class="form-control" id="edit_listing_fee" name="listing_fee" step="0.01" min="0" value="30" onchange="calculateEditPrices()" readonly>
+                                                    <div class="form-text">Fixed listing fee</div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="edit_markup_percentage" class="form-label">Markup (%)</label>
+                                                    <input type="number" class="form-control" id="edit_markup_percentage" name="markup_percentage" step="1" min="0" max="100" value="30" onchange="calculateEditPrices()" readonly>
+                                                    <div class="form-text">Fixed markup percentage</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <div class="mb-3">
                                         <label for="edit_price" class="form-label">Price (₱)</label>
-                                        <input type="number" class="form-control" id="edit_price" name="price" step="0.01" min="0" required>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="edit_price" name="price" step="0.01" min="0" required>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="calculateEditPrices()">Recalculate</button>
+                                        </div>
+                                        <div class="form-text">Suggested: ₱<span id="edit_suggested_price">0.00</span></div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="edit_rent_price" class="form-label">Rent Price (₱)</label>
-                                        <input type="number" class="form-control" id="edit_rent_price" name="rent_price" step="0.01" min="0" required>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="edit_rent_price" name="rent_price" step="0.01" min="0" required>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="calculateEditPrices()">Recalculate</button>
+                                        </div>
+                                        <div class="form-text">Suggested: ₱<span id="edit_suggested_rent_price">0.00</span></div>
                                     </div>
+                                    
                                     <div class="mb-3">
                                         <label for="edit_stock" class="form-label">Stock</label>
                                         <input type="number" class="form-control" id="edit_stock" name="stock" min="0" required>
@@ -1369,6 +1546,71 @@ body {
                             document.getElementById('edit_stock').value = book.stock;
                             document.getElementById('edit_description').value = book.description;
                             
+                            // Calculate pricing strategy fields based on existing prices
+                            const price = parseFloat(book.price) || 0;
+                            const rentPrice = parseFloat(book.rent_price) || 0;
+                            const condition = book.condition || 'New';
+                            
+                            // Get condition multiplier from database or calculate based on condition
+                            let conditionMultiplier = parseFloat(book.condition_multiplier) || 1.0;
+                            if (!book.condition_multiplier) {
+                                switch(condition) {
+                                    case 'New': conditionMultiplier = 1.2; break;
+                                    case 'Like New': conditionMultiplier = 1.1; break;
+                                    case 'Very Good': conditionMultiplier = 1.0; break;
+                                    case 'Good': conditionMultiplier = 0.9; break;
+                                    case 'Fair': conditionMultiplier = 0.8; break;
+                                    case 'Poor': conditionMultiplier = 0.7; break;
+                                }
+                            }
+                            
+                            // Set fixed values for handling fee, listing fee, and markup percentage
+                            let handlingFee = 10; // Fixed value
+                            let listingFee = 30;  // Fixed value
+                            let markupPercentage = 30; // Fixed value
+                            
+                            // Get base rental fee from database or calculate
+                            let baseRentalFee = parseFloat(book.base_rental_fee) || 0;
+                            
+                            // If the value doesn't exist in the database, calculate it
+                            if (!book.base_rental_fee) {
+                                // Calculate base rental fee from rent price
+                                if (rentPrice > 0) {
+                                    baseRentalFee = Math.max(5, (rentPrice / conditionMultiplier) - handlingFee);
+                                } else {
+                                    baseRentalFee = 50; // Default value
+                                }
+                            }
+                            
+                            // Get book value from database or calculate
+                            let bookValue = parseFloat(book.book_value) || 0;
+                            
+                            // If the value doesn't exist in the database, calculate it
+                            if (!book.book_value) {
+                                // Calculate book value from price
+                                if (price > 0) {
+                                    const estimatedBaseValue = price / 1.3;
+                                    bookValue = Math.max(10, estimatedBaseValue - listingFee);
+                                } else {
+                                    bookValue = 200; // Default value
+                                }
+                            }
+                            
+                            // Set the calculated values
+                            document.getElementById('edit_base_rental_fee').value = baseRentalFee.toFixed(2);
+                            document.getElementById('edit_handling_fee').value = handlingFee.toFixed(2);
+                            document.getElementById('edit_condition_multiplier').value = conditionMultiplier.toFixed(2);
+                            document.getElementById('edit_book_value').value = bookValue.toFixed(2);
+                            document.getElementById('edit_listing_fee').value = listingFee.toFixed(2);
+                            document.getElementById('edit_markup_percentage').value = markupPercentage;
+                            
+                            // Update the suggested prices
+                            document.getElementById('edit_suggested_rent_price').textContent = rentPrice.toFixed(2);
+                            document.getElementById('edit_suggested_price').textContent = price.toFixed(2);
+                            
+                            // Call updateEditConditionMultiplier to ensure multiplier is correctly set
+                            updateEditConditionMultiplier();
+                            
                             // Show current cover image preview if available
                             const coverPreview = document.getElementById('current_cover_preview');
                             if (book.cover_image) {
@@ -1533,6 +1775,137 @@ body {
                 }
             }
         });
+
+        // Function to set condition multiplier based on selected condition
+        function updateConditionMultiplier() {
+            const conditionSelect = document.getElementById('condition');
+            const multiplierInput = document.getElementById('condition_multiplier');
+            
+            // Set multiplier based on condition
+            switch(conditionSelect.value) {
+                case 'New':
+                    multiplierInput.value = 1.2;
+                    break;
+                case 'Like New':
+                    multiplierInput.value = 1.1;
+                    break;
+                case 'Very Good':
+                    multiplierInput.value = 1.0;
+                    break;
+                case 'Good':
+                    multiplierInput.value = 0.9;
+                    break;
+                case 'Fair':
+                    multiplierInput.value = 0.8;
+                    break;
+                case 'Poor':
+                    multiplierInput.value = 0.7;
+                    break;
+                default:
+                    multiplierInput.value = 1.0;
+            }
+        }
+        
+        // Function to calculate prices based on the formulas
+        function calculatePrices() {
+            // Get rental pricing inputs
+            const baseRentalFee = parseFloat(document.getElementById('base_rental_fee').value) || 0;
+            const handlingFee = parseFloat(document.getElementById('handling_fee').value) || 0;
+            const conditionMultiplier = parseFloat(document.getElementById('condition_multiplier').value) || 1;
+            
+            // Get sales pricing inputs
+            const bookValue = parseFloat(document.getElementById('book_value').value) || 0;
+            const listingFee = parseFloat(document.getElementById('listing_fee').value) || 0;
+            const markupPercentage = parseFloat(document.getElementById('markup_percentage').value) || 0;
+            const markup = markupPercentage / 100;
+            
+            // Calculate rental price: SP = (Base Rental Fee + Handling) × Condition Multiplier
+            const suggestedRentPrice = (baseRentalFee + handlingFee) * conditionMultiplier;
+            
+            // Calculate sales price: SP = (Book Value + Listing Fee) × (1 + Markup)
+            const suggestedPrice = (bookValue + listingFee) * (1 + markup);
+            
+            // Update the displayed suggested prices
+            document.getElementById('suggested_rent_price').textContent = suggestedRentPrice.toFixed(2);
+            document.getElementById('suggested_price').textContent = suggestedPrice.toFixed(2);
+            
+            // Update the actual input fields with the calculated values
+            document.getElementById('rent_price').value = suggestedRentPrice.toFixed(2);
+            document.getElementById('price').value = suggestedPrice.toFixed(2);
+        }
+        
+        // Call the function when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConditionMultiplier();
+            calculatePrices();
+            
+            // Also set up the edit form
+            const editConditionSelect = document.getElementById('edit_condition');
+            if (editConditionSelect) {
+                editConditionSelect.addEventListener('change', function() {
+                    updateEditConditionMultiplier();
+                    calculateEditPrices();
+                });
+            }
+        });
+
+        // Function to set condition multiplier for edit form
+        function updateEditConditionMultiplier() {
+            const conditionSelect = document.getElementById('edit_condition');
+            const multiplierInput = document.getElementById('edit_condition_multiplier');
+            
+            // Set multiplier based on condition
+            switch(conditionSelect.value) {
+                case 'New':
+                    multiplierInput.value = 1.2;
+                    break;
+                case 'Like New':
+                    multiplierInput.value = 1.1;
+                    break;
+                case 'Very Good':
+                    multiplierInput.value = 1.0;
+                    break;
+                case 'Good':
+                    multiplierInput.value = 0.9;
+                    break;
+                case 'Fair':
+                    multiplierInput.value = 0.8;
+                    break;
+                case 'Poor':
+                    multiplierInput.value = 0.7;
+                    break;
+                default:
+                    multiplierInput.value = 1.0;
+            }
+        }
+        
+        // Function to calculate prices for edit form
+        function calculateEditPrices() {
+            // Get rental pricing inputs
+            const baseRentalFee = parseFloat(document.getElementById('edit_base_rental_fee').value) || 0;
+            const handlingFee = parseFloat(document.getElementById('edit_handling_fee').value) || 0;
+            const conditionMultiplier = parseFloat(document.getElementById('edit_condition_multiplier').value) || 1;
+            
+            // Get sales pricing inputs
+            const bookValue = parseFloat(document.getElementById('edit_book_value').value) || 0;
+            const listingFee = parseFloat(document.getElementById('edit_listing_fee').value) || 0;
+            const markupPercentage = parseFloat(document.getElementById('edit_markup_percentage').value) || 0;
+            const markup = markupPercentage / 100;
+            
+            // Calculate rental price: SP = (Base Rental Fee + Handling) × Condition Multiplier
+            const suggestedRentPrice = (baseRentalFee + handlingFee) * conditionMultiplier;
+            
+            // Calculate sales price: SP = (Book Value + Listing Fee) × (1 + Markup)
+            const suggestedPrice = (bookValue + listingFee) * (1 + markup);
+            
+            // Update the displayed suggested prices
+            document.getElementById('edit_suggested_rent_price').textContent = suggestedRentPrice.toFixed(2);
+            document.getElementById('edit_suggested_price').textContent = suggestedPrice.toFixed(2);
+            
+            // Update the actual input fields with the calculated values
+            document.getElementById('edit_rent_price').value = suggestedRentPrice.toFixed(2);
+            document.getElementById('edit_price').value = suggestedPrice.toFixed(2);
+        }
     </script>
     
 </body>
