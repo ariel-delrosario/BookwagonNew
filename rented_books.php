@@ -877,7 +877,7 @@ $highlightRentalId = isset($_GET['highlight_rental']) ? intval($_GET['highlight_
                         <i class="fa-solid fa-shopping-cart"></i> Cart
                     </a>
                     <a href="rented_books.php" class="sidebar-link active">
-                        <i class="fa-solid fa-book"></i> My Orders
+                        <i class="fa-solid fa-book"></i> Rented Books
                     </a>
                     <a href="history.php" class="sidebar-link">
                         <i class="fa-solid fa-clock-rotate-left"></i> History

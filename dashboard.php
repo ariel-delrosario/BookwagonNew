@@ -42,105 +42,210 @@ while ($row = $themesResult->fetch_assoc()) {
     <link rel="stylesheet" href="css/tab.css">
     <style>
         :root {
-            --primary-color: #f8a100;
+            --primary-color: #d9b99b; /* Modern indigo */
+            --primary-light: rgb(255, 132, 56);
+            --primary-dark: #4f46e5;
             --secondary-color: #f8f9fa;
-            --text-dark: #212529;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
             color: var(--text-dark);
-            background-color: #f8f9fa;
+            background-color:rgb(255, 255, 255);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
         
-        .dropdown-item {
-            padding: 0.75rem 1.5rem;
-            transition: background-color 0.2s;
-        }
-        
-        .dropdown-item:hover {
-            background-color: rgba(0,0,0,0.05);
-        }
-        
-        .dropdown-item:active {
-            background-color: rgba(0,0,0,0.1);
-        }
-        
-        .dropdown-toggle::after {
-            margin-left: 0.5em;
-        }
-        
-        /* Header styles */
+        /* Ensure proper z-index stacking for navbar */
         .navbar {
             padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 1050; /* Higher z-index than other elements */
         }
         
         .navbar-brand img {
             height: 60px;
         }
         
-        /* Carousel styles */
+
+        
+        /* Navbar styles remain unchanged to preserve header */
+        
+        /* Enhanced Carousel styles */
         .carousel {
-            margin: 20px 0;
-            border-radius: 10px;
+            margin: 25px 0;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: var(--card-shadow);
+        }
+        
+        .carousel-item {
+            position: relative;
         }
         
         .carousel-item img {
             width: 100%;
-            max-height: 400px;
+            max-height: 450px;
             object-fit: cover;
+            filter: brightness(0.85);
+        }
+        
+        .carousel-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+            padding: 30px;
+            text-align: left;
+        }
+        
+        .carousel-caption h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .carousel-caption p {
+            font-size: 1.1rem;
+            margin-bottom: 0;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         
         .carousel-control-prev, .carousel-control-next {
             width: 5%;
-            opacity: 0.8;
-            background-color: rgba(0,0,0,0.2);
+            opacity: 0.9;
+            background-color: rgba(0,0,0,0.3);
             border-radius: 50%;
             height: 50px;
             width: 50px;
             top: 50%;
             transform: translateY(-50%);
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-control-prev:hover, .carousel-control-next:hover {
+            background-color: var(--primary-color);
         }
         
         .carousel-indicators {
-            bottom: 10px;
+            bottom: 20px;
         }
         
         .carousel-indicators button {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background-color: #ccc;
+            background-color: rgba(255,255,255,0.7);
             margin: 0 5px;
+            transition: all 0.3s ease;
         }
         
-        .carousel-indicators .active {
+        .carousel-indicators button.active {
             background-color: var(--primary-color);
+            width: 12px;
+            height: 12px;
         }
         
-        /* Section headers */
+        /* Added animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .book-card {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .book-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Enhanced sections and containers */
+
+        
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            margin-top: 40px;
+            margin-bottom: 25px;
+            margin-top: 50px;
+            position: relative;
         }
         
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+        
+        /* 3D tilt effect for book cards */
+        .book-card {
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            perspective: 1000px;
+        }
+        
+        .book-card:hover .book-img-container {
+            transform: rotateY(10deg);
+        }
+        
+        .book-img-container {
+            transition: transform 0.5s ease;
+            transform-style: preserve-3d;
+        }
+        
+        /* Modern gradient backgrounds for sections */
+        .libraries-section {
+            background: linear-gradient(145deg, white, #f8fafc);
+        }
+        
+        /* Glass morphism effect */
+        .search-bar .form-control {
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Section headers */
         .section-title {
             font-weight: 700;
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             color: var(--text-dark);
             position: relative;
-            padding-left: 15px;
+            padding-left: 18px;
         }
         
         .section-title:before {
@@ -149,7 +254,7 @@ while ($row = $themesResult->fetch_assoc()) {
             left: 0;
             top: 0;
             height: 100%;
-            width: 5px;
+            width: 6px;
             background-color: var(--primary-color);
             border-radius: 3px;
         }
@@ -157,43 +262,53 @@ while ($row = $themesResult->fetch_assoc()) {
         .see-more {
             color: var(--primary-color);
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background-color: rgba(99, 102, 241, 0.1);
         }
         
         .see-more:hover {
-            color: #d18a00;
-            text-decoration: underline;
+            color: white;
+            background-color: var(--primary-color);
+            transform: translateY(-2px);
         }
         
-        /* Book cards */
+        .see-more i {
+            transition: transform 0.3s ease;
+        }
+        
+        .see-more:hover i {
+            transform: translateX(3px);
+        }
+        
+        /* Book cards with enhanced design */
         .books-container {
-            display: flex;
-            flex-wrap: wrap;
-            margin: 0 -10px; /* Negative margin to counteract padding */
-        }
-        
-        .book-col {
-            padding: 10px; /* Spacing between books */
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            margin: 0 -10px;
         }
         
         .book-card {
-            margin-bottom: 20px;
-            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
             background: white;
-            border-radius: 10px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.07);
             height: 100%;
+            border: 1px solid rgba(0,0,0,0.05);
         }
         
         .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-8px);
+            box-shadow: var(--hover-shadow);
         }
         
         .book-img-container {
-            height: 250px;
+            height: 260px;
             overflow: hidden;
             position: relative;
         }
@@ -202,177 +317,209 @@ while ($row = $themesResult->fetch_assoc()) {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.5s;
+            transition: transform 0.8s ease;
         }
         
         .book-card:hover .book-img {
-            transform: scale(1.05);
+            transform: scale(1.08);
         }
         
         .book-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 12px;
+            right: 12px;
             background-color: var(--primary-color);
             color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
+            padding: 5px 12px;
+            border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 2;
         }
         
         .book-details {
-            padding: 15px;
+            padding: 18px;
         }
         
         .book-author {
             font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 5px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 500;
         }
         
         .book-title {
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 5px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            min-height: 40px;
+            min-height: 44px;
+            color: var(--text-dark);
         }
         
         .book-price {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 15px;
             align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
         }
         
         .price-week {
             font-size: 0.8rem;
-            color: var(--text-muted);
+            color: var(--text-light);
+            font-weight: 500;
         }
         
         .price-value {
             font-weight: 700;
             color: var(--primary-color);
-            font-size: 1.1rem;
+            font-size: 1.15rem;
         }
         
         .book-actions {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 15px;
+            gap: 10px;
+        }
+        
+        .btn-rent, .btn-buy {
+            flex: 1;
+            text-align: center;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
         }
         
         .btn-rent {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.85rem;
-            transition: all 0.3s;
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(99, 102, 241, 0.2);
         }
         
         .btn-rent:hover {
-            background-color: #e69500;
+            background-color: var(--primary-color);
             color: white;
+            transform: translateY(-2px);
         }
         
         .btn-buy {
-            background-color: #28a745;
+            background-color: var(--success-color);
             color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.85rem;
-            transition: all 0.3s;
+            border: 1px solid var(--success-color);
         }
         
         .btn-buy:hover {
-            background-color: #218838;
+            background-color: #0ca678;
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
         }
         
-        /* Theme tabs */
+        /* Theme tabs with enhanced design */
         .theme-tabs {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+            border-bottom: none;
             flex-wrap: wrap;
+            gap: 10px;
         }
         
         .theme-tab {
-            padding: 10px 20px;
+            padding: 8px 18px;
             cursor: pointer;
-            font-weight: 500;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-            color: var(--text-muted);
-            margin-right: 5px;
+            font-weight: 600;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            color: var(--text-light);
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
         }
         
         .theme-tab:hover {
             color: var(--primary-color);
+            border-color: var(--primary-color);
+            background-color: rgba(99, 102, 241, 0.05);
         }
         
         .theme-tab.active {
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
-            background-color: rgba(248, 161, 0, 0.05);
+            color: white;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
         }
         
-        /* Libraries section */
+        /* Libraries section with enhanced design */
         .libraries-section {
-            margin-top: 40px;
+            margin-top: 50px;
             background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
         }
         
         .search-bar {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             position: relative;
         }
         
         .search-bar .form-control {
-            padding-left: 40px;
-            border-radius: 25px;
+            padding: 12px 45px;
+            border-radius: 30px;
             border: 1px solid var(--border-color);
+            background-color: #f8fafc;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .search-bar .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
         }
         
         .search-bar i {
             position: absolute;
-            left: 15px;
+            left: 18px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
+            font-size: 1.1rem;
         }
         
         .library-card {
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border: none;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
             display: flex;
-            transition: all 0.3s;
-            background-color: white;
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .library-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transform: translateY(-3px);
+            box-shadow: var(--hover-shadow);
+            transform: translateY(-5px);
+            background-color: white;
         }
         
         .library-img {
-            width: 120px;
-            height: 80px;
-            border-radius: 5px;
+            width: 140px;
+            height: 100px;
+            border-radius: 10px;
             object-fit: cover;
-            margin-right: 15px;
+            margin-right: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
         .library-details {
@@ -383,12 +530,18 @@ while ($row = $themesResult->fetch_assoc()) {
             font-weight: 600;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
         }
         
         .library-type {
             font-size: 0.8rem;
             color: var(--text-muted);
+            background-color: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
         }
         
         .library-rating {
@@ -398,22 +551,24 @@ while ($row = $themesResult->fetch_assoc()) {
         
         .rating-value {
             margin-right: 5px;
+            font-weight: 700;
         }
         
         .stars {
-            color: var(--primary-color);
-            font-size: 0.8rem;
+            color: var(--warning-color);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
         }
         
         .library-location {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin: 5px 0;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 8px 0;
         }
         
         .library-address {
-            font-size: 0.85rem;
-            margin-bottom: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
         }
         
         .library-status {
@@ -421,99 +576,119 @@ while ($row = $themesResult->fetch_assoc()) {
             align-items: center;
             font-size: 0.85rem;
             margin-top: 10px;
+            color: var(--text-light);
         }
         
         .status-indicator {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-right: 5px;
+            margin-right: 8px;
         }
         
         .status-open {
-            background-color: #28a745;
+            background-color: var(--success-color);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
         }
         
         .status-closed {
-            background-color: #dc3545;
+            background-color: var(--danger-color);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
         }
         
         .directions-btn {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--primary-color);
             text-decoration: none;
             cursor: pointer;
             transition: all 0.3s;
+            background-color: rgba(99, 102, 241, 0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 500;
         }
         
         .directions-btn:hover {
-            color: #d18a00;
-            text-decoration: underline;
+            color: white;
+            background-color: var(--primary-color);
+            text-decoration: none;
         }
         
-        /* Footer */
+        /* Footer enhanced styling */
         .footer {
-            padding: 40px 0;
+            padding: 60px 0 40px;
             border-top: 1px solid var(--border-color);
-            margin-top: 40px;
-            background-color: #f8f9fa;
+            margin-top: 60px;
+            background-color: #f8fafc;
         }
         
         .footer-heading {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--primary-color);
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
         }
         
         .footer-link {
             display: block;
-            color: var(--text-muted);
-            margin-bottom: 8px;
+            color: var(--text-light);
+            margin-bottom: 10px;
             text-decoration: none;
             transition: all 0.3s;
+            font-size: 0.95rem;
         }
         
         .footer-link:hover {
             color: var(--primary-color);
-            padding-left: 5px;
+            padding-left: 8px;
         }
         
         .app-download {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .app-download:hover {
+            transform: translateY(-3px);
         }
         
         .app-download img {
             height: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
         .social-links {
-            margin-top: 20px;
+            margin-top: 25px;
         }
         
         .social-icon {
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background-color: var(--text-dark);
-            color: white;
-            margin-right: 10px;
+            background-color: #f1f5f9;
+            color: var(--primary-color);
+            margin-right: 12px;
             text-decoration: none;
             transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .social-icon:hover {
             background-color: var(--primary-color);
+            color: white;
             transform: translateY(-3px);
         }
         
         .copyright {
             padding: 20px 0;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
             border-top: 1px solid var(--border-color);
             background-color: white;
@@ -522,7 +697,7 @@ while ($row = $themesResult->fetch_assoc()) {
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .book-img-container {
-                height: 200px;
+                height: 220px;
             }
             
             .library-card {
@@ -531,21 +706,23 @@ while ($row = $themesResult->fetch_assoc()) {
             
             .library-img {
                 width: 100%;
-                height: 120px;
+                height: 140px;
                 margin-right: 0;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
             
-            .book-col {
-                flex: 0 0 50%;
-                max-width: 50%;
+            .books-container {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             }
         }
         
         @media (max-width: 576px) {
-            .book-col {
-                flex: 0 0 100%;
-                max-width: 100%;
+            .books-container {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            }
+            
+            .section-title {
+                font-size: 1.4rem;
             }
         }
     </style>
@@ -586,23 +763,43 @@ while ($row = $themesResult->fetch_assoc()) {
     </div>
 
     <!-- Hero Carousel -->
-    <div class="container text-center">
-        <div id="heroCarousel" class="carousel slide mx-auto" data-bs-ride="carousel" style="max-width: 1200px;">
+    <div class="container">
+        <div id="heroCarousel" class="carousel slide mx-auto" data-bs-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
                     <img src="images/1.jpg" class="d-block w-100" alt="Philippine Book Festival">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h3>Philippine Book Festival</h3>
+                        <p>Join us for the biggest literary event of the year</p>
+                    </div>
                 </div>
                 <div class="carousel-item">
                     <img src="images/2.png" class="d-block w-100" alt="BookWagon Feature">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h3>Join Our Community</h3>
+                        <p>Connect with fellow book lovers</p>
+                    </div>
                 </div>
                 <div class="carousel-item">
                     <img src="images/3.png" class="d-block w-100" alt="BookWagon Promotion">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h3>Special Offers</h3>
+                        <p>Get exclusive deals on your favorite titles</p>
+                    </div>
                 </div>
                 <div class="carousel-item">
                     <img src="images/4.jpg" class="d-block w-100" alt="BookWagon Event">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h3>Author Meet & Greet</h3>
+                        <p>Meet your favorite authors in person</p>
+                    </div>
                 </div>
                 <div class="carousel-item">
                     <img src="images/5.jpg" class="d-block w-100" alt="BookWagon Special">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h3>New Arrivals Weekly</h3>
+                        <p>Fresh titles added to our collection every week</p>
+                    </div>
                 </div>
             </div>
             <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
@@ -627,29 +824,27 @@ while ($row = $themesResult->fetch_assoc()) {
     <div class="container">
         <div class="section-header">
             <h4 class="section-title">Most Popular</h4>
-            <a href="explore.php?filter=popular" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
+            <a href="rentbooks.php?filter=Most popular" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
         </div>
         
         <div class="books-container">
             <?php if ($popularBooksResult->num_rows > 0): ?>
                 <?php while($book = $popularBooksResult->fetch_assoc()): ?>
-                    <div class="book-col col-md-2 col-6">
-                        <div class="book-card">
-                            <div class="book-img-container">
-                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
-                                <span class="book-badge">Popular</span>
+                    <div class="book-card">
+                        <div class="book-img-container">
+                            <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                            <span class="book-badge">Popular</span>
+                        </div>
+                        <div class="book-details">
+                            <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                            <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                            <div class="book-price">
+                                <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
+                                <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
                             </div>
-                            <div class="book-details">
-                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
-                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
-                                <div class="book-price">
-                                    <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
-                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
-                                </div>
-                                <div class="book-actions">
-                                    <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
-                                    <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
-                                </div>
+                            <div class="book-actions">
+                                <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
+                                <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
                             </div>
                         </div>
                     </div>
@@ -666,29 +861,27 @@ while ($row = $themesResult->fetch_assoc()) {
     <div class="container">
         <div class="section-header">
             <h4 class="section-title">New Releases</h4>
-            <a href="explore.php?filter=new" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
+            <a href="rentbooks.php?filter=new" class="see-more">See More <i class="fas fa-chevron-right"></i></a>
         </div>
         
         <div class="books-container">
             <?php if ($newReleasesResult->num_rows > 0): ?>
                 <?php while($book = $newReleasesResult->fetch_assoc()): ?>
-                    <div class="book-col col-md-3 col-6">
-                        <div class="book-card">
-                            <div class="book-img-container">
-                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
-                                <span class="book-badge">New</span>
+                    <div class="book-card">
+                        <div class="book-img-container">
+                            <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                            <span class="book-badge">New</span>
+                        </div>
+                        <div class="book-details">
+                            <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                            <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                            <div class="book-price">
+                                <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
+                                <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
                             </div>
-                            <div class="book-details">
-                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
-                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
-                                <div class="book-price">
-                                    <span class="price-week">₱<?php echo number_format($book['rent_price'], 2); ?>/week</span>
-                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
-                                </div>
-                                <div class="book-actions">
-                                    <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
-                                    <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
-                                </div>
+                            <div class="book-actions">
+                                <a href="rentbooks.php?book_id=<?php echo $book['book_id']; ?>" class="btn-rent">Rent</a>
+                                <a href="checkout.php?book_id=<?php echo $book['book_id']; ?>" class="btn-buy">Buy</a>
                             </div>
                         </div>
                     </div>
@@ -722,23 +915,22 @@ while ($row = $themesResult->fetch_assoc()) {
             
             if ($exploreResult->num_rows > 0): 
                 while($book = $exploreResult->fetch_assoc()): ?>
-                    <div class="book-col col-md-3 col-6">
-                        <div class="book-card">
-                            <div class="book-img-container">
-                                <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                    <div class="book-card">
+                        <div class="book-img-container">
+                            <img src="<?php echo $book['cover_image'] ?: 'https://via.placeholder.com/200x250?text=No+Cover'; ?>" class="book-img" alt="<?php echo htmlspecialchars($book['title']); ?>">
+                            <?php if($book['theme']): ?>
+                                <span class="book-badge"><?php echo htmlspecialchars($book['theme']); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="book-details">
+                            <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
+                            <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
+                            <div class="book-price">
+                                <span class="price-week">Theme Book</span>
+                                <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
                             </div>
-                            <div class="book-details">
-                                <div class="book-title"><?php echo htmlspecialchars($book['title']); ?></div>
-                                <div class="book-author"><?php echo htmlspecialchars($book['author']); ?></div>
-                                <?php if($book['theme']): ?>
-                                    <div class="book-theme"><small class="text-muted">Theme: <?php echo htmlspecialchars($book['theme']); ?></small></div>
-                                <?php endif; ?>
-                                <div class="book-price">
-                                    <span class="price-value">₱<?php echo number_format($book['price'], 2); ?></span>
-                                </div>
-                                <div class="book-actions">
-                                    <a href="book_details.php?id=<?php echo $book['book_id']; ?>" class="btn-rent">View Details</a>
-                                </div>
+                            <div class="book-actions">
+                                <a href="book_details.php?id=<?php echo $book['book_id']; ?>" class="btn-rent">View Details</a>
                             </div>
                         </div>
                     </div>
@@ -750,27 +942,27 @@ while ($row = $themesResult->fetch_assoc()) {
             <?php endif; ?>
         </div>
         
-        <div class="text-end mt-3 mb-4">
+        <div class="text-end mt-4 mb-5">
             <a href="rentbooks.php" class="see-more">Browse All Books <i class="fas fa-chevron-right"></i></a>
         </div>
     </div>
     
     <!-- Libraries Section -->
     <div class="container libraries-section">
-        <h4 class="section-title mb-3">Libraries Near You</h4>
+        <h4 class="section-title mb-4">Libraries Near You</h4>
         
         <div class="search-bar">
             <i class="fas fa-search"></i>
-            <input type="text" class="form-control" placeholder="Search libraries...">
+            <input type="text" class="form-control" placeholder="Search libraries by name or location...">
         </div>
         
-        <div class="mb-2">Suggested for you</div>
+        <div class="mb-3 fw-semibold text-muted">Suggested for you</div>
         
         <div class="library-card">
-            <img src="https://i.ibb.co/nrDHDDZ/davao-central-college.jpg" class="library-img" alt="Davao Central College Library">
+            <img src="Images/up.jpg" class="library-img" alt="Davao Central College Library">
             <div class="library-details">
                 <div class="library-name">
-                    <div>Davao Central College Library <span class="library-type">(Private)</span></div>
+                    <div>Davao Central College Library <span class="library-type">Private</span></div>
                     <div class="library-rating">
                         <span class="rating-value">5.0</span>
                         <div class="stars">★★★★★</div>
@@ -785,7 +977,7 @@ while ($row = $themesResult->fetch_assoc()) {
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <a href="#" class="directions-btn">
-                        Get Directions <i class="fa-solid fa-turn-down"></i>
+                        <i class="fa-solid fa-directions me-1"></i> Get Directions
                     </a>
                     <div class="library-status">
                         <span class="status-indicator status-open"></span>
@@ -796,10 +988,10 @@ while ($row = $themesResult->fetch_assoc()) {
         </div>
         
         <div class="library-card">
-            <img src="https://i.ibb.co/wWGsCWB/davao-city-library.jpg" class="library-img" alt="Davao City Library">
+            <img src="images/Davao library.jpg" class="library-img" alt="Davao City Library">
             <div class="library-details">
                 <div class="library-name">
-                    <div>Davao City Library and Information Center <span class="library-type">(Public)</span></div>
+                    <div>Davao City Library and Information Center <span class="library-type">Public</span></div>
                     <div class="library-rating">
                         <span class="rating-value">5.0</span>
                         <div class="stars">★★★★★</div>
@@ -814,7 +1006,7 @@ while ($row = $themesResult->fetch_assoc()) {
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <a href="#" class="directions-btn">
-                        Get Directions <i class="fa-solid fa-turn-down"></i>
+                        <i class="fa-solid fa-directions me-1"></i> Get Directions
                     </a>
                     <div class="library-status">
                         <span class="status-indicator status-open"></span>
@@ -825,10 +1017,10 @@ while ($row = $themesResult->fetch_assoc()) {
         </div>
         
         <div class="library-card">
-            <img src="https://i.ibb.co/1LqDVdR/university-library.jpg" class="library-img" alt="University Library">
+            <img src="Images/usep.jpg" class="library-img" alt="University Library">
             <div class="library-details">
                 <div class="library-name">
-                    <div>University Library <span class="library-type">(Private)</span></div>
+                    <div>University Library <span class="library-type">Private</span></div>
                     <div class="library-rating">
                         <span class="rating-value">5.0</span>
                         <div class="stars">★★★★★</div>
@@ -843,7 +1035,7 @@ while ($row = $themesResult->fetch_assoc()) {
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <a href="#" class="directions-btn">
-                        Get Directions <i class="fa-solid fa-turn-down"></i>
+                        <i class="fa-solid fa-directions me-1"></i> Get Directions
                     </a>
                     <div class="library-status">
                         <span class="status-indicator status-closed"></span>
@@ -851,6 +1043,12 @@ while ($row = $themesResult->fetch_assoc()) {
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="libraries.php" class="see-more">
+                <i class="fas fa-map-marker-alt me-1"></i> View All Libraries
+            </a>
         </div>
     </div>
 
@@ -922,23 +1120,84 @@ while ($row = $themesResult->fetch_assoc()) {
         // Initialize carousel
         document.addEventListener('DOMContentLoaded', function() {
             new bootstrap.Carousel(document.querySelector('#heroCarousel'), {
-                interval: 3000, // Change slides every 3 seconds
+                interval: 5000, // Change slides every 5 seconds
                 wrap: true     // Continue from last to first slide
             });
             
-            // Theme tab functionality
+            // Theme tab functionality with animation
             const tabs = document.querySelectorAll('.theme-tab');
+            const books = document.querySelectorAll('.books-container .book-card');
+            
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
+                    // Update active tab
                     tabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
-                    // Here you would typically filter books by theme
-                    // For now it's just UI demonstration
+                    
+                    const selectedTheme = this.innerText.trim();
+                    
+                    // Fade out all books first
+                    books.forEach(book => {
+                        book.style.opacity = '0.5';
+                        book.style.transform = 'translateY(10px)';
+                        book.style.transition = 'all 0.3s ease';
+                    });
+                    
+                    // Simulate loading new books by theme
+                    setTimeout(() => {
+                        books.forEach(book => {
+                            book.style.opacity = '1';
+                            book.style.transform = 'translateY(0)';
+                        });
+                    }, 400);
                 });
             });
+            
+            // Smooth scroll for "See more" links
+            document.querySelectorAll('.see-more').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Don't smooth scroll for links pointing to other pages
+                    if (this.getAttribute('href').includes('#')) {
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href').split('#')[1];
+                        const targetElement = document.getElementById(targetId);
+                        if (targetElement) {
+                            window.scrollTo({
+                                top: targetElement.offsetTop - 100,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
+            });
+            
+            // Add hover effects to book cards
+            const bookCards = document.querySelectorAll('.book-card');
+            bookCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px)';
+                    this.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.07)';
+                });
+            });
+            
+            // Enhance search input
+            const searchInput = document.querySelector('.search-bar .form-control');
+            if (searchInput) {
+                searchInput.addEventListener('focus', function() {
+                    this.parentElement.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.25)';
+                });
+                
+                searchInput.addEventListener('blur', function() {
+                    this.parentElement.style.boxShadow = 'none';
+                });
+            }
         });
-    </script>
-    <script>
+        
         // Prevent back button after logout
         window.onload = function() {
             if(typeof window.history.pushState == 'function') {

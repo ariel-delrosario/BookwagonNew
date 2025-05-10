@@ -21,7 +21,7 @@ $photo = $_SESSION['profile_picture'] ?? '';
     <link rel="stylesheet" href="css/tab.css">
     <style>
         :root {
-            --primary-color: #f8a100;
+            --primary-color: #d9b99b;
             --secondary-color: #f8f9fa;
             --accent-color: #ff6b6b;
             --text-dark: #212529;
@@ -32,9 +32,12 @@ $photo = $_SESSION['profile_picture'] ?? '';
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
             color: var(--text-dark);
-            background-color: #f5f7fa;
+            background-color:rgb(255, 255, 255);
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
         .book-title, .book-author {
             text-decoration: none !important;
@@ -43,14 +46,16 @@ $photo = $_SESSION['profile_picture'] ?? '';
         .navbar {
             padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1050; /* Higher z-index than other elements */
         }
         
         .navbar-brand img {
             height: 60px;
         }
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
         /* Enhanced Card Design */
         .book-card {
@@ -419,32 +424,29 @@ $photo = $_SESSION['profile_picture'] ?? '';
 
 
     <!-- Navigation tabs -->
-    <div class="container  pt-3">
+    <div class="container pt-3">
     <div class="tab-menu">
-      <a href="dashboard.php" >
-          
+      <a href="dashboard.php">
           Home
       </a>
       <a href="rentbooks.php">
-         
           Rentbooks
       </a>
       <a href="explore.php">
-          
           Explore
       </a>
       <a href="libraries.php">
-          
           Libraries
       </a>
       <a href="bookswap.php" class="active">
-          
           Bookswap
       </a>
     </div>
+    </div>
 
-    <div class="container py-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Main Content -->
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
             <h1 class="mb-0">Book Swap</h1>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookModal">
                 <i class="fas fa-plus me-2"></i> Add Book for Swap

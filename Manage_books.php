@@ -91,7 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $price = floatval($_POST['price']);
             $rent_price = floatval($_POST['rent_price']);
             $stock = intval($_POST['stock']);
-            $description = mysqli_real_escape_string($conn, $_POST['description']);
+            $description = mysqli_real_escape_string($conn, $_POST['description'] ?? '');
+            
+            // Add debugging to check the description value
+            error_log("Description before DB insert: " . $description);
             
             // Pricing strategy fields
             $base_rental_fee = floatval($_POST['base_rental_fee'] ?? 0);
@@ -122,7 +125,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log("Cover image path before DB insert: " . $cover_image);
 
             $stmt = $conn->prepare($query);
-            $stmt->bind_param("isssssssssddiisdddddi", $userId, $title, $author, $isbn, $genre, $theme, $book_type, $condition, $damages, $popularity, $price, $rent_price, $stock, $description, $cover_image, $base_rental_fee, $handling_fee, $condition_multiplier, $book_value, $listing_fee, $markup_percentage);
+            // Ensure proper parameter binding:
+            // i - integer: user_id
+            // s - string: title, author, isbn, genre, theme, book_type, condition, damages, popularity
+            // d - double: price, rent_price
+            // d - double: base_rental_fee, handling_fee, condition_multiplier, book_value, listing_fee
+            // i - integer: stock, markup_percentage
+            // s - string: description, cover_image
+            $stmt->bind_param("isssssssssddiisdddddi", 
+                $userId, 
+                $title, 
+                $author, 
+                $isbn, 
+                $genre, 
+                $theme, 
+                $book_type, 
+                $condition, 
+                $damages, 
+                $popularity, 
+                $price, 
+                $rent_price, 
+                $stock, 
+                $description, // string for description
+                $cover_image, 
+                $base_rental_fee, 
+                $handling_fee, 
+                $condition_multiplier, 
+                $book_value, 
+                $listing_fee, 
+                $markup_percentage);
             if ($stmt->execute()) {
                 $success_message = "Book added successfully!";
                 // Redirect to prevent form resubmission on refresh
@@ -163,7 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $price = floatval($_POST['price']);
                     $rent_price = floatval($_POST['rent_price']);
                     $stock = intval($_POST['stock']);
-                    $description = mysqli_real_escape_string($conn, $_POST['description']);
+                    $description = mysqli_real_escape_string($conn, $_POST['description'] ?? '');
+                    
+                    // Add debugging to check the description value
+                    error_log("Description before DB update: " . $description);
                     
                     // Pricing strategy fields
                     $base_rental_fee = floatval($_POST['base_rental_fee'] ?? 0);
@@ -210,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                   book_value = ?, listing_fee = ?, markup_percentage = ? 
                                   WHERE book_id = ? AND user_id = ?";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param("sssssssssddisdddddiiii", $title, $author, $isbn, $genre, $theme, 
+                        $stmt->bind_param("sssssssssddisdddddiii", $title, $author, $isbn, $genre, $theme, 
                                          $book_type, $condition, $damages, $popularity, 
                                          $price, $rent_price, $stock, $description,
                                          $base_rental_fee, $handling_fee, $condition_multiplier,
@@ -239,22 +273,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         elseif ($_POST['action'] === 'delete' && isset($_POST['book_id'])) {
             $book_id = intval($_POST['book_id']);
             
-            // Delete the book if it belongs to the current user
-            $query = "DELETE FROM books WHERE book_id = ? AND user_id = ?";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param("ii", $book_id, $userId);
+            // First check if this book belongs to the current user
+            $check_query = "SELECT user_id FROM books WHERE book_id = ?";
+            $check_stmt = $conn->prepare($check_query);
+            $check_stmt->bind_param("i", $book_id);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
             
-            if ($stmt->execute()) {
-                if ($stmt->affected_rows > 0) {
-                    $success_message = "Book deleted successfully!";
+            if ($check_result->num_rows === 1) {
+                $book_data = $check_result->fetch_assoc();
+                
+                // Verify ownership
+                if ($book_data['user_id'] == $userId) {
+                    // Begin transaction for data consistency
+                    $conn->begin_transaction();
+                    
+                    try {
+                        // First delete related rental records
+                        $delete_rentals_query = "DELETE FROM book_rentals WHERE book_id = ?";
+                        $delete_rentals_stmt = $conn->prepare($delete_rentals_query);
+                        $delete_rentals_stmt->bind_param("i", $book_id);
+                        $delete_rentals_stmt->execute();
+                        $delete_rentals_stmt->close();
+                        
+                        // Also delete related cart items
+                        $delete_cart_query = "DELETE FROM cart WHERE book_id = ?";
+                        $delete_cart_stmt = $conn->prepare($delete_cart_query);
+                        $delete_cart_stmt->bind_param("i", $book_id);
+                        $delete_cart_stmt->execute();
+                        $delete_cart_stmt->close();
+                        
+                        // Also delete related order_items
+                        $delete_order_items_query = "DELETE FROM order_items WHERE book_id = ?";
+                        $delete_order_items_stmt = $conn->prepare($delete_order_items_query);
+                        $delete_order_items_stmt->bind_param("i", $book_id);
+                        $delete_order_items_stmt->execute();
+                        $delete_order_items_stmt->close();
+                        
+                        // Now delete the book
+                        $delete_book_query = "DELETE FROM books WHERE book_id = ? AND user_id = ?";
+                        $delete_book_stmt = $conn->prepare($delete_book_query);
+                        $delete_book_stmt->bind_param("ii", $book_id, $userId);
+                        $delete_book_stmt->execute();
+                        
+                        if ($delete_book_stmt->affected_rows > 0) {
+                            $conn->commit();
+                            $success_message = "Book deleted successfully!";
+                        } else {
+                            $conn->rollback();
+                            $error_message = "You don't have permission to delete this book.";
+                        }
+                        
+                        $delete_book_stmt->close();
+                    } catch (Exception $e) {
+                        $conn->rollback();
+                        $error_message = "Error deleting book: " . $e->getMessage();
+                    }
                 } else {
-                    $error_message = "You don't have permission to delete this book or the book doesn't exist.";
+                    $error_message = "You don't have permission to delete this book.";
                 }
             } else {
-                $error_message = "Error deleting book: " . $stmt->error;
+                $error_message = "Book not found.";
             }
             
-            $stmt->close();
+            $check_stmt->close();
         }
     }
 }
@@ -482,6 +564,7 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
+    overflow: hidden;
 }
 
 .user-info {
@@ -709,7 +792,25 @@ body {
         </button>
         <div class="user-profile">
             <div class="avatar">
-                <?php echo substr(isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email'], 0, 1); ?>
+                <?php 
+                // Check if user has a profile picture
+                $photo = '';
+                $query = "SELECT profile_picture FROM users WHERE id = ?";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("i", $_SESSION['id']);
+                $stmt->execute();
+                $stmt->bind_result($photo);
+                $stmt->fetch();
+                $stmt->close();
+                
+                if ($photo && file_exists($photo)) {
+                    // Display profile picture
+                    echo '<img src="'.$photo.'" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+                } else {
+                    // Display initial letter if no profile picture
+                    echo substr(isset($_SESSION['firstname']) ? $_SESSION['firstname'] : $_SESSION['email'], 0, 1);
+                }
+                ?>
             </div>
             <div class="user-info">
                 <div class="user-name">

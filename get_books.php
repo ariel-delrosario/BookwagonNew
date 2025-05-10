@@ -56,7 +56,9 @@ if(isset($_GET['search']) && $_GET['search'] != '') {
 }
 
 // Default query
-$query = "SELECT * FROM books";
+$query = "SELECT b.*, u.firstname, u.lastname, u.profile_picture 
+          FROM books b
+          JOIN users u ON b.user_id = u.id";
 
 // Add WHERE if we have conditions
 if(!empty($where_clauses)) {
@@ -67,20 +69,20 @@ if(!empty($where_clauses)) {
 if(isset($_GET['sort'])) {
     switch($_GET['sort']) {
         case 'price_asc':
-            $query .= " ORDER BY price ASC";
+            $query .= " ORDER BY b.price ASC";
             break;
         case 'price_desc':
-            $query .= " ORDER BY price DESC";
+            $query .= " ORDER BY b.price DESC";
             break;
         case 'newest':
-            $query .= " ORDER BY created_at DESC";
+            $query .= " ORDER BY b.created_at DESC";
             break;
         default:
-            $query .= " ORDER BY title ASC";
+            $query .= " ORDER BY b.title ASC";
     }
 } else {
     // Default sorting
-    $query .= " ORDER BY title ASC";
+    $query .= " ORDER BY b.title ASC";
 }
 
 // Pagination
@@ -107,7 +109,7 @@ if(!empty($params)) {
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Add custom CSS for book images
+// Add custom CSS for book images and seller info
 echo '<style>
     .book-img-container {
         height: 300px;
@@ -148,6 +150,39 @@ echo '<style>
         top: 10px;
         left: 10px;
         z-index: 10;
+    }
+    .seller-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 8px;
+    }
+    .seller-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: #f1f1f1;
+        color: #6c757d;
+        text-align: center;
+        line-height: 30px;
+        font-weight: bold;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .seller-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .seller-name {
+        font-size: 0.85rem;
+        color: #6c757d;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 </style>';
 
@@ -192,6 +227,19 @@ if ($result->num_rows > 0) {
                 break;
         }
         
+        // Get seller info
+        $sellerName = htmlspecialchars($book['firstname'] . ' ' . $book['lastname']);
+        $sellerInitial = substr($book['firstname'], 0, 1);
+        $sellerAvatar = !empty($book['profile_picture']) ? $book['profile_picture'] : '';
+        
+        // Check and validate the profile picture exists
+        $avatarHtml = '';
+        if (!empty($sellerAvatar) && file_exists($sellerAvatar)) {
+            $avatarHtml = '<img src="' . $sellerAvatar . '" alt="Seller" onerror="this.parentNode.innerHTML=\'' . $sellerInitial . '\'">';
+        } else {
+            $avatarHtml = $sellerInitial;
+        }
+        
         // Display the book with link to book_details.php
         echo '
         <div class="col">
@@ -220,6 +268,14 @@ if ($result->num_rows > 0) {
                         </div>
                     </div>
                     <div class="card-body">
+                        <!-- Seller Information -->
+                        <div class="seller-info">
+                            <div class="seller-avatar">
+                                ' . $avatarHtml . '
+                            </div>
+                            <div class="seller-name">' . $sellerName . '</div>
+                        </div>
+                        
                         <h6 class="card-subtitle text-muted mb-1">' . $book['author'] . '</h6>
                         <h5 class="card-title">' . $book['title'] . '</h5>
                         <div class="book-rating mb-2">';

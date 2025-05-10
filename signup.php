@@ -130,43 +130,181 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>BookWagon - Sign Up</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #f8a100;
-            --secondary-color: #f8f9fa;
-            --accent-blue: #5b6bff;
-            --bg-cream: #faebc8;
+            --primary-color: #f8b079;
+            --primary-light: #ffd0b1;
+            --primary-dark: #e69c68;
+            --secondary-color: #f8fafc;
+            --accent-color: #6366f1; /* Indigo */
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --text-muted: #94a3b8;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         body {
-            background-color: #f8f9fa;
-            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f0f4ff 0%, #eef1ff 100%);
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            color: var(--text-dark);
+            position: relative;
+            overflow-x: hidden;
+            padding: 40px 0;
+        }
+        
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+            z-index: -1;
         }
         
         .signup-container {
-            max-width: 1000px; /* Increased from 800px to 1000px */
-            margin: 40px auto;
-            border-radius: 12px;
+            max-width: 1000px;
+            margin: 0 auto;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--card-shadow);
             background: white;
+            position: relative;
+            z-index: 2;
         }
         
         .signup-row {
             display: flex;
-            min-height: 650px;
+            min-height: 700px;
         }
         
         .signup-image {
-            flex: 0.8; /* Slightly reduced from 1 to give more space to the form */
-            background-color: var(--bg-cream);
+            flex: 0.8;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .signup-image-content {
+            position: relative;
+            z-index: 5;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .signup-image-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .signup-image-text {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .signup-benefits {
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .benefit-icon {
+            margin-right: 15px;
+            background-color: rgba(255, 255, 255, 0.2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .benefit-text {
+            font-size: 0.95rem;
+        }
+        
+        .floating-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .floating-element {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 2rem;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .element-1 {
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .element-2 {
+            top: 20%;
+            right: 15%;
+            animation-delay: 1s;
+        }
+        
+        .element-3 {
+            bottom: 15%;
+            left: 15%;
+            animation-delay: 2s;
+        }
+        
+        .element-4 {
+            bottom: 25%;
+            right: 10%;
+            animation-delay: 3s;
+        }
+        
+        .element-5 {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 4s;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0); }
         }
         
         .signup-form {
-            flex: 1.2; /* Increased from 1 to give more space for the form fields */
-            padding: 40px 50px; /* Increased horizontal padding */
+            flex: 1.2;
+            padding: 40px 50px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -174,114 +312,82 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         .logo {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .logo img {
-            height: 100px;
+            height: 70px;
+            transition: transform 0.3s ease;
+        }
+        
+        .logo-text {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-left: 10px;
+        }
+        
+        .logo:hover img {
+            transform: scale(1.05);
         }
         
         h2 {
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1.8rem;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+            color: var(--text-dark);
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
         }
         
         .form-control {
-            height: 50px;
-            padding: 10px 15px;
-            border-radius: 8px;
+            height: 55px;
+            padding: 12px 20px;
+            border-radius: 12px;
             margin-bottom: 20px;
-            border: 1px solid #ddd;
+            border: 1px solid #e2e8f0;
+            font-size: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
         }
         
-        .btn-signup {
-            height: 50px;
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 18px;
-            margin-top: 10px;
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(248, 176, 121, 0.2);
         }
         
-        .btn-signup:hover {
-            background-color: #e09000;
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background-image: none;
         }
         
-        .form-divider {
-            text-align: center;
-            position: relative;
-            margin: 30px 0;
-        }
-        
-        .form-divider::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 50%;
-            width: 45%;
-            height: 1px;
-            background-color: #ddd;
-        }
-        
-        .form-divider::after {
-            content: "";
-            position: absolute;
-            right: 0;
-            top: 50%;
-            width: 45%;
-            height: 1px;
-            background-color: #ddd;
-        }
-        
-        .login-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .text-primary {
-            color: var(--primary-color) !important;
-        }
-        
-        .alert {
-            padding: 10px 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
-        
-        .blob-blue {
-            position: absolute;
-            background-color: var(--accent-blue);
-            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            z-index: 0;
-        }
-        
-        .blob-blue-1 {
-            width: 200px;
-            height: 200px;
-            top: -50px;
-            left: -50px;
-        }
-        
-        .blob-blue-2 {
-            width: 300px;
-            height: 300px;
-            bottom: -100px;
-            left: -50px;
-        }
-        
-        .blob-blue-3 {
-            width: 180px;
-            height: 180px;
-            top: 50%;
-            right: -50px;
-            transform: translateY(-50%);
+        .invalid-feedback {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-top: -15px;
+            margin-bottom: 15px;
         }
         
         .name-row {
             display: flex;
-            gap: 15px; /* Increased gap between name fields */
+            gap: 15px;
             margin-bottom: 0;
         }
         
@@ -290,9 +396,179 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         
         .optional-field {
-            font-size: 12px;
-            color: #6c757d;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: white;
+            padding: 0 5px;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Add a specific style for middle name field to prevent overlap */
+        .middle-name-container {
+            position: relative;
+        }
+        
+        .middle-name-container .optional-field {
+            right: 15px;
+            top: 15px;
+            background-color: #fff;
+            padding: 0 5px;
+            z-index: 5;
+        }
+        
+        .btn-signup {
+            height: 55px;
+            background: linear-gradient(to right, var(--primary-color), var(--primary-dark));
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-signup::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, var(--primary-dark), var(--primary-color));
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        
+        .btn-signup:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(248, 176, 121, 0.4);
+        }
+        
+        .btn-signup:hover::after {
+            opacity: 1;
+        }
+        
+        .form-divider {
+            text-align: center;
+            position: relative;
+            margin: 30px 0;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .form-divider::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 42%;
+            height: 1px;
+            background-color: #e2e8f0;
+        }
+        
+        .form-divider::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 50%;
+            width: 42%;
+            height: 1px;
+            background-color: #e2e8f0;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+        
+        .text-primary {
+            color: var(--primary-color) !important;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .text-primary:hover {
+            color: var(--primary-dark) !important;
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            border: none;
+            font-size: 0.95rem;
+        }
+        
+        .alert-danger {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+            margin-top: 0.25em;
+            vertical-align: top;
+            background-color: #fff;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            border: 1px solid #d1d5db;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            transition: all 0.3s ease;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .form-check-label {
             margin-left: 5px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+        
+        .form-check-label a {
+            transition: all 0.3s ease;
+        }
+        
+        .form-group {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        
+        .password-toggle:hover {
+            color: var(--primary-color);
         }
         
         /* Responsive adjustments */
@@ -308,11 +584,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             
             .signup-image {
-                display: none; /* Hide the image on smaller screens */
+                display: none;
             }
             
             .signup-form {
-                padding: 30px;
+                padding: 40px 30px;
             }
             
             .name-row {
@@ -324,6 +600,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 width: 100%;
             }
         }
+        
+        @media (max-width: 576px) {
+            .signup-container {
+                max-width: 95%;
+                margin: 20px auto;
+            }
+            
+            .signup-form {
+                padding: 30px 20px;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -332,22 +623,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="signup-row">
                 <!-- Left side - Decorative illustration -->
                 <div class="signup-image">
-                    <div class="blob-blue blob-blue-1"></div>
-                    <div class="blob-blue blob-blue-2"></div>
-                    <div class="blob-blue blob-blue-3"></div>
+                    <div class="floating-elements">
+                        <div class="floating-element element-1"><i class="fas fa-book"></i></div>
+                        <div class="floating-element element-2"><i class="fas fa-book-open"></i></div>
+                        <div class="floating-element element-3"><i class="fas fa-bookmark"></i></div>
+                        <div class="floating-element element-4"><i class="fas fa-book-reader"></i></div>
+                        <div class="floating-element element-5"><i class="fas fa-graduation-cap"></i></div>
+                    </div>
+                    
+                    <div class="signup-image-content">
+                        <div class="signup-image-title">Join BookWagon Today</div>
+                        <div class="signup-image-text">Create your account and become part of the Philippines' growing community of book lovers.</div>
+                        
+                        <div class="signup-benefits">
+                            <div class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </div>
+                                <div class="benefit-text">Buy and sell books at great prices</div>
+                            </div>
+                            
+                            <div class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-sync-alt"></i>
+                                </div>
+                                <div class="benefit-text">Rent books and save money</div>
+                            </div>
+                            
+                            <div class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="benefit-text">Connect with fellow book enthusiasts</div>
+                            </div>
+                            
+                            <div class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="benefit-text">Find libraries and bookshops near you</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Right side - Signup form -->
                 <div class="signup-form">
                     <div class="logo">
                         <img src="images/logo.png" alt="BookWagon Logo">
+
                     </div>
                     
-                    <h2>Create an Account</h2>
+                    <div class="text-center mb-4">
+                        <h2>Create an Account</h2>
+                    </div>
                     
                     <?php 
                     if(!empty($signup_err)){
-                        echo '<div class="alert alert-danger">' . $signup_err . '</div>';
+                        echo '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' . $signup_err . '</div>';
                     }        
                     ?>
                     
@@ -359,9 +692,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <span class="invalid-feedback"><?php echo $firstname_err; ?></span>
                             </div>
                             
-                            <div class="form-group">
+                            <div class="form-group middle-name-container">
                                 <input type="text" name="middlename" class="form-control" 
                                        value="<?php echo $middlename; ?>" placeholder="Middle Name">
+                                <span class="optional-field">Optional</span>
                             </div>
                             
                             <div class="form-group">
@@ -378,14 +712,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
                         
                         <div class="form-group">
-                            <input type="password" name="password" class="form-control <?php echo (!empty($password_err)) ? 'is-invalid' : ''; ?>" 
+                            <input type="password" name="password" id="password" class="form-control <?php echo (!empty($password_err)) ? 'is-invalid' : ''; ?>" 
                                    placeholder="Password">
+                            <span class="password-toggle" onclick="togglePassword('password')">
+                                <i class="fas fa-eye"></i>
+                            </span>
                             <span class="invalid-feedback"><?php echo $password_err; ?></span>
                         </div>
                         
                         <div class="form-group">
-                            <input type="password" name="confirm_password" class="form-control <?php echo (!empty($confirm_password_err)) ? 'is-invalid' : ''; ?>" 
+                            <input type="password" name="confirm_password" id="confirm_password" class="form-control <?php echo (!empty($confirm_password_err)) ? 'is-invalid' : ''; ?>" 
                                    placeholder="Confirm Password">
+                            <span class="password-toggle" onclick="togglePassword('confirm_password')">
+                                <i class="fas fa-eye"></i>
+                            </span>
                             <span class="invalid-feedback"><?php echo $confirm_password_err; ?></span>
                         </div>
                         
@@ -397,10 +737,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
                         
                         <div class="form-group">
-                            <button type="submit" class="btn btn-primary btn-signup w-100">Sign Up</button>
+                            <button type="submit" class="btn btn-primary btn-signup w-100">Create Account</button>
                         </div>
                         
-                        <div class="form-divider">Or</div>
+                        <div class="form-divider">or sign up with</div>
                         
                         <div class="login-link">
                             Already have an account? <a href="login.php" class="text-primary">Sign in</a>
@@ -413,5 +753,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Script -->
+    <script>
+        function togglePassword(inputId) {
+            const passwordInput = document.getElementById(inputId);
+            const icon = event.currentTarget.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 </body>
 </html>

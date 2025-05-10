@@ -106,23 +106,31 @@ $activeTab = $_GET['tab'] ?? 'all';
         }
         
         .sidebar {
-            background-color: white;
-            border-radius: 8px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
             padding: 20px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100%;
         }
         
         .sidebar-link {
             display: block;
             padding: 12px 20px;
-            color: #6c757d;
+            color: var(--text-muted);
             text-decoration: none;
             transition: all 0.3s;
+            border-left: 3px solid transparent;
         }
         
-        .sidebar-link.active, .sidebar-link:hover {
-            background-color: #f8f9fa;
-            color: #f8a100;
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: rgba(0, 123, 255, 0.05);
+            color: #4a6cf7;
+            border-left: 3px solid #4a6cf7;
+        }
+        
+        .sidebar-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 10px;
         }
         
         .history-card {
@@ -250,7 +258,7 @@ $activeTab = $_GET['tab'] ?? 'all';
                         <i class="fa-solid fa-shopping-cart"></i> Cart
                     </a>
                     <a href="rented_books.php" class="sidebar-link">
-                        <i class="fa-solid fa-book"></i> My Orders
+                        <i class="fa-solid fa-book"></i> Rented Books
                     </a>
                     <a href="history.php" class="sidebar-link active">
                         <i class="fa-solid fa-clock-rotate-left"></i> History

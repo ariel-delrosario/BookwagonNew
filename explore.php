@@ -78,12 +78,12 @@ $bookTypeResult = $conn->query($bookTypeQuery);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bookwagon - Explore Books</title>
     <!-- Bootstrap and custom CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/tab.css">
     <style>
         :root {
-            --primary-color: #f8a100;
+            --primary-color: #d9b99b;
             --secondary-color: #f8f9fa;
             --text-dark: #212529;
             --text-muted: #6c757d;

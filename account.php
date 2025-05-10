@@ -286,7 +286,7 @@ $tax_id = $user['tax_id'] ?? '';
                         <i class="fa-solid fa-shopping-cart"></i> Cart
                     </a>
                     <a href="rented_books.php" class="sidebar-link">
-                        <i class="fa-solid fa-book"></i> Rented books
+                        <i class="fa-solid fa-book"></i> Rented Books
                     </a>
                     <a href="history.php" class="sidebar-link">
                         <i class="fa-solid fa-clock-rotate-left"></i> History
@@ -538,6 +538,41 @@ $tax_id = $user['tax_id'] ?? '';
     </div>
 
     <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script>
+        // Do not initialize modals programmatically - use data attributes instead
+        // Add event listener for edit picture button to avoid the backdrop error
+        document.addEventListener('DOMContentLoaded', function() {
+            var editPictureBtn = document.querySelector('.edit-picture');
+            if (editPictureBtn) {
+                editPictureBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var modalId = this.getAttribute('data-bs-target');
+                    var myModal = document.querySelector(modalId);
+                    if (myModal) {
+                        myModal.classList.add('show');
+                        myModal.style.display = 'block';
+                        document.body.classList.add('modal-open');
+                        
+                        // Create backdrop manually
+                        var backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        document.body.appendChild(backdrop);
+                        
+                        // Add close functionality to close buttons
+                        var closeButtons = myModal.querySelectorAll('[data-bs-dismiss="modal"]');
+                        closeButtons.forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                myModal.classList.remove('show');
+                                myModal.style.display = 'none';
+                                document.body.classList.remove('modal-open');
+                                backdrop.remove();
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

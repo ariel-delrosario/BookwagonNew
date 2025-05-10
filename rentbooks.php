@@ -2,11 +2,12 @@
 include("session.php");
 include("connect.php");
 
-
-$userType = $_SESSION['usertype'] ?? ''; // Change to lowercase 'usertype'
-$firstName = $_SESSION['firstname'] ?? ''; // Change to lowercase 'firstname'
-$lastName = $_SESSION['lastname'] ?? ''; // Change to lowercase 'lastname'
+$userType = $_SESSION['usertype'] ?? '';
+$firstName = $_SESSION['firstname'] ?? '';
+$lastName = $_SESSION['lastname'] ?? '';
 $email = $_SESSION['email'] ?? '';
+$phone = $_SESSION['phone'] ?? '';
+$photo = $_SESSION['profile_picture'] ?? '';
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -32,7 +33,7 @@ if ($conn->connect_error) {
             --border-color: #dee2e6;
         }
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
             color: var(--text-dark);
             background-color: #fff;
         }
@@ -164,6 +165,40 @@ if ($conn->connect_error) {
                 margin-bottom: 20px;
                 padding-bottom: 20px;
             }
+        }
+        /* Seller info styles */
+        .seller-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        .seller-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: #f1f1f1;
+            color: #6c757d;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .seller-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .seller-name {
+            font-size: 0.85rem;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -419,6 +454,17 @@ if ($conn->connect_error) {
                 img.addEventListener('error', function() {
                     this.src = 'uploads/covers/default_book.jpg';
                     this.style.opacity = '1';
+                });
+            });
+            
+            // Handle seller profile images
+            const sellerImages = document.querySelectorAll('.seller-avatar img');
+            sellerImages.forEach(img => {
+                img.addEventListener('error', function() {
+                    // Replace with the first initial of the seller's name
+                    const sellerName = this.closest('.seller-info').querySelector('.seller-name').textContent.trim();
+                    const initial = sellerName.charAt(0);
+                    this.parentNode.innerHTML = initial;
                 });
             });
         }

@@ -569,11 +569,7 @@ switch($order['payment_method']) {
                     <div class="order-summary">
                         <div class="summary-row">
                             <span>Subtotal</span>
-                            <span>₱<?php echo number_format($order['total_amount'] * 0.9, 2); ?></span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Tax (10%)</span>
-                            <span>₱<?php echo number_format($order['total_amount'] * 0.1, 2); ?></span>
+                            <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
                         </div>
                         <div class="summary-row">
                             <span>Total</span>
