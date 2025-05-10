@@ -750,7 +750,7 @@ while ($row = $themesResult->fetch_assoc()) {
       </a>
       <a href="explore.php">
           
-          Explore
+          Forum
       </a>
       <a href="libraries.php">
           

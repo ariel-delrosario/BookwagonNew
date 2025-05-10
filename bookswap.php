@@ -433,7 +433,7 @@ $photo = $_SESSION['profile_picture'] ?? '';
           Rentbooks
       </a>
       <a href="explore.php">
-          Explore
+          Forum
       </a>
       <a href="libraries.php">
           Libraries

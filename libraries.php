@@ -639,7 +639,7 @@ if ($conn->connect_error) {
       </a>
       <a href="explore.php">
           
-          Explore
+          Forum
       </a>
       <a href="libraries.php"class="active">
           

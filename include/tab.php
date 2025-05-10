@@ -10,7 +10,7 @@
       </a>
       <a href="explore.php">
           
-          Explore
+          Forum
       </a>
       <a href="libraries.php">
           
