@@ -12,19 +12,33 @@
     text-decoration: none;
     color: black; /* Default color */
     font-size: 16px; /* Default size */
+    transition: color 0.3s ease;
   }
   
-  .tab-menu a img {
+  /* SVG icon styling */
+  .tab-icon {
     margin-right: 8px;
-    height: 24px; /* Adjust the size as needed */
+    height: 24px;
+    width: 24px;
+    transition: all 0.3s ease;
+    /* stroke is used for outline icons */
+    stroke: currentColor;
+    stroke-width: 1.5;
   }
   
   .tab-menu a:hover {
     color: #f8ad3e; /* Change color on hover */
   }
   
+  .tab-menu a:hover .tab-icon {
+    transform: scale(1.1);
+    /* The stroke will automatically change with the text color */
+  }
+  
   .tab-menu a.active {
     color: #f8ad3e; /* Active color */
     border-bottom: 2px solid #f8ad3e; /* Active underline */
   }
+  
+  /* The SVG will automatically change color with the text */
   

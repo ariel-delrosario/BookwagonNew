@@ -36,6 +36,9 @@ while ($row = $themesResult->fetch_assoc()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BookWagon - Dashboard</title>
+    <?php if(isset($_SESSION['login_count'])): ?>
+    <meta name="login-count" content="<?php echo $_SESSION['login_count']; ?>">
+    <?php endif; ?>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -741,23 +744,38 @@ while ($row = $themesResult->fetch_assoc()) {
     <div class="container  pt-3">
     <div class="tab-menu">
       <a href="dashboard.php" class="active">
-          
+          <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
           Home
       </a>
       <a href="rentbooks.php">
-         
+         <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
           Rentbooks
       </a>
       <a href="explore.php">
-          
+          <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
           Forum
       </a>
       <a href="libraries.php">
-          
+          <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <line x1="12" y1="6" x2="12" y2="14"></line>
+            <rect x="9" y="6" width="6" height="3"></rect>
+          </svg>
           Libraries
       </a>
       <a href="bookswap.php">
-          
+          <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M21,9L17,5V8H10V10H17V13M7,11L3,15L7,19V16H14V14H7V11Z" />
+          </svg>
           Bookswap
       </a>
     </div>
@@ -1218,7 +1236,30 @@ while ($row = $themesResult->fetch_assoc()) {
         });
     </script>
 
-    <script src="https://kit.fontawesome.com/yourkitcode.js" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- IntroJS for the interactive tour (with fallback) -->
+    <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
+    <script>
+        // Check if intro.js loaded correctly, if not, try another CDN
+        if (typeof introJs === 'undefined') {
+            console.error("IntroJS not loaded from primary CDN, trying fallback...");
+            let script = document.createElement('script');
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/intro.js/6.0.0/intro.min.js";
+            document.head.appendChild(script);
+            
+            let link = document.createElement('link');
+            link.rel = "stylesheet";
+            link.href = "https://cdnjs.cloudflare.com/ajax/libs/intro.js/6.0.0/introjs.min.css";
+            document.head.appendChild(link);
+        } else {
+            console.log("IntroJS loaded successfully!");
+        }
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/intro.js/minified/introjs.min.css">
+    
+    <!-- Custom tour script -->
+    <script src="js/book-tour.js"></script>
 </body>
 </html>

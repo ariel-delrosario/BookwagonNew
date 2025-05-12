@@ -103,10 +103,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             // Attempt to execute the prepared statement
             if ($stmt->execute()) {
-                // Redirect to login page
+                // Set a flag for the login page to know this is a new user
                 echo "<script>
                 alert('Account created successfully!');
-                window.location.href = 'login.php';
+                window.location.href = 'login.php?new_user=1';
             </script>";
             } else {
                 $signup_err = "Something went wrong. Please try again later.";

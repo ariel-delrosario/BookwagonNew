@@ -49,6 +49,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             // Password is correct, start a new session
                             session_start();
                             
+                            // Get the current login count
+                            $loginCountSql = "SELECT login_count FROM users WHERE id = ?";
+                            $loginCountStmt = $conn->prepare($loginCountSql);
+                            $loginCountStmt->bind_param("i", $id);
+                            $loginCountStmt->execute();
+                            $loginCountStmt->bind_result($login_count);
+                            $loginCountStmt->fetch();
+                            $loginCountStmt->close();
+                            
+                            // Check if this is the user's first login (login_count is 0)
+                            $isFirstLogin = ($login_count == 0);
+                            
+                            // Increment the login count
+                            $updateLoginCountSql = "UPDATE users SET login_count = login_count + 1 WHERE id = ?";
+                            $updateLoginCountStmt = $conn->prepare($updateLoginCountSql);
+                            $updateLoginCountStmt->bind_param("i", $id);
+                            $updateLoginCountStmt->execute();
+                            $updateLoginCountStmt->close();
+                            
                             // Store data in session variables
                             $_SESSION["loggedin"] = true;
                             $_SESSION["id"] = $id;
@@ -57,10 +76,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             $_SESSION["lastname"] = $lastname;
                             $_SESSION["username"] = $username;
                             $_SESSION["usertype"] = $usertype;
+                            $_SESSION["login_count"] = $login_count + 1;
                             
-                            // Redirect based on usertype
+                            // Check if this is a new user or the first login
+                            $isNewUser = isset($_GET['new_user']) && $_GET['new_user'] == '1';
+                            
+                            // Redirect based on usertype and whether this is a new user
                             if($usertype === "admin") {
                                 header("location: admin/dashboard.php");
+                            } else if($isNewUser || $isFirstLogin) {
+                                // Redirect new users to the welcome page
+                                header("location: welcome.php");
                             } else {
                                 header("location: dashboard.php");
                             }
